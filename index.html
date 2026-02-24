@@ -8,8 +8,7 @@
   <!-- 🏖️ Beach emoji favicon via SVG -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏖️</text></svg>">
 
-  <!-- PWA manifest inline -->
-  <link rel="manifest" href="data:application/json;charset=utf-8,{%22name%22:%22Beach%20or%20Nah%22,%22short_name%22:%22Beach%3F%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%2387CEEB%22,%22theme_color%22:%2387CEEB%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%253Csvg%2520xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%2520viewBox%3D'0%25200%2520100%2520100'%253E%253Ctext%2520y%3D'.9em'%2520font-size%3D'90'%253E%F0%9F%8F%96%EF%B8%8F%253C%2Ftext%253E%253C%2Fsvg%253E%22,%22sizes%22:%22any%22,%22type%22:%22image/svg+xml%22}]}">
+  <!-- PWA manifest injected as Blob URL by JS below -->
   <meta name="theme-color" content="#87CEEB" id="theme-color-meta">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -34,8 +33,6 @@
       --btn-hover: rgba(255,255,255,0.35);
       --weather-bg: #f0f8ff;
       --weather-border: #ddeeff;
-      --countdown-bg: #f8fafc;
-      --countdown-border: #e2e8f0;
       --tide-label: #64748b;
     }
 
@@ -55,8 +52,6 @@
       --btn-hover: rgba(255,255,255,0.18);
       --weather-bg: rgba(255,255,255,0.05);
       --weather-border: rgba(255,255,255,0.08);
-      --countdown-bg: rgba(255,255,255,0.04);
-      --countdown-border: rgba(255,255,255,0.08);
       --tide-label: #94a3b8;
     }
 
@@ -357,67 +352,6 @@
       background: var(--divider);
     }
 
-    /* Countdown timers */
-    .countdown-section {
-      margin-bottom: 18px;
-    }
-
-    .countdown-title {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--tide-label);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-
-    .countdown-row {
-      display: flex;
-      gap: 10px;
-    }
-
-    .countdown-card {
-      flex: 1;
-      background: var(--countdown-bg);
-      border: 1px solid var(--countdown-border);
-      border-radius: 14px;
-      padding: 12px 10px;
-      text-align: center;
-      transition: background 0.5s, border-color 0.5s;
-    }
-
-    .countdown-type {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 4px;
-    }
-
-    .countdown-type.high { color: #3b82f6; }
-    .countdown-type.low { color: #f59e0b; }
-
-    .countdown-time {
-      font-family: 'Fredoka', sans-serif;
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--text-primary);
-      line-height: 1;
-      transition: color 0.5s;
-    }
-
-    .countdown-eta {
-      font-size: 10px;
-      color: var(--text-muted);
-      margin-top: 3px;
-    }
-
-    .countdown-height {
-      font-size: 11px;
-      color: var(--text-secondary);
-      margin-top: 2px;
-    }
 
     /* Station info */
     .station-info {
@@ -628,15 +562,37 @@
     let tideRatePerMinute = 0;
     let lastMeasuredValue = 0;
     let deferredPrompt = null;
-    let countdownInterval = null;
-    let nextHighTide = null;
-    let nextLowTide = null;
+
+    // ─── PWA Manifest (Blob URL — works from a single HTML file) ──
+    (function injectManifest() {
+      const iconSvg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏖️</text></svg>`;
+      const iconUrl = 'data:image/svg+xml,' + encodeURIComponent(iconSvg);
+      const manifest = {
+        name: 'Beach or Nah',
+        short_name: 'Beach?',
+        description: 'Check your local tide at a glance',
+        start_url: location.href,
+        display: 'standalone',
+        orientation: 'portrait',
+        background_color: '#87CEEB',
+        theme_color: '#87CEEB',
+        icons: [
+          { src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = url;
+      document.head.appendChild(link);
+    })();
 
     // ─── Dark mode ────────────────────────────────────────────────
     function initDarkMode() {
       const saved = localStorage.getItem('beachDarkMode');
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (saved === 'dark' || (saved === null && prefersDark)) {
+      // Default is light mode; only go dark if explicitly saved as dark
+      if (saved === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
       }
     }
@@ -737,7 +693,7 @@
     // ─── Weather (Open-Meteo – free, no key) ────────────────────
     async function getWeather(lat, lon) {
       try {
-        const url = `${OWM_BASE}?latitude=${lat}&longitude=${lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m,wave_height,weathercode&wind_speed_unit=mph&timezone=auto`;
+        const url = `${OWM_BASE}?latitude=${lat}&longitude=${lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m,weathercode&wind_speed_unit=mph&timezone=auto`;
         const res = await fetch(url);
         const data = await res.json();
         return data.current || null;
@@ -773,8 +729,6 @@
       const temp = weather.temperature_2m != null ? `${Math.round(weather.temperature_2m)}°C` : '--';
       const wind = weather.wind_speed_10m != null ? `${Math.round(weather.wind_speed_10m)} mph` : '--';
       const windArrow = weather.wind_direction_10m != null ? windDirToArrow(weather.wind_direction_10m) : '';
-      const wave = weather.wave_height != null ? `${weather.wave_height.toFixed(1)}m` : '--';
-
       return `
         <div class="weather-strip">
           <div class="weather-item">
@@ -788,104 +742,12 @@
             <div class="weather-label">Wind</div>
             <div class="weather-value">${windArrow} ${wind}</div>
           </div>
-          <div class="weather-divider"></div>
-          <div class="weather-item">
-            <div class="weather-icon">🌊</div>
-            <div class="weather-label">Waves</div>
-            <div class="weather-value">${wave}</div>
-          </div>
         </div>
       `;
     }
 
-    // ─── High/Low tide predictions ───────────────────────────────
-    async function getTidePredictions(stationId) {
-      // Use 24h of readings to find recent high and low tide events
-      try {
-        const since = new Date(Date.now() - 6 * 3600000).toISOString();
-        const until = new Date(Date.now() + 18 * 3600000).toISOString();
-        const res = await fetch(`${EA_API_BASE}/id/stations/${stationId}/readings?_sorted&_limit=200&since=${since}`);
-        const data = await res.json();
 
-        if (!data.items || data.items.length < 5) return null;
 
-        // Readings are newest-first; reverse for chronological
-        const readings = [...data.items].reverse();
-        const extrema = [];
-
-        for (let i = 1; i < readings.length - 1; i++) {
-          const prev = readings[i-1].value;
-          const curr = readings[i].value;
-          const next = readings[i+1].value;
-          if (curr > prev && curr > next) extrema.push({ type: 'high', value: curr, time: new Date(readings[i].dateTime) });
-          if (curr < prev && curr < next) extrema.push({ type: 'low',  value: curr, time: new Date(readings[i].dateTime) });
-        }
-
-        const now = new Date();
-        // Find next high and low after now (or very recent past within 30 min)
-        const upcoming = extrema.filter(e => e.time > new Date(now - 30*60000));
-
-        nextHighTide = upcoming.find(e => e.type === 'high') || null;
-        nextLowTide  = upcoming.find(e => e.type === 'low')  || null;
-
-        // If we don't have both from history, estimate from current trend
-        // (simple sinusoidal approx: M2 tide ~12h 25min period)
-        const TIDE_PERIOD_MS = 12 * 3600000 + 25 * 60000;
-        const lastReading = readings[readings.length - 1];
-
-        if (!nextHighTide) {
-          nextHighTide = { value: '~high', time: new Date(new Date(lastReading.dateTime).getTime() + TIDE_PERIOD_MS / 2), estimated: true };
-        }
-        if (!nextLowTide) {
-          nextLowTide = { value: '~low', time: new Date(new Date(lastReading.dateTime).getTime() + TIDE_PERIOD_MS / 2), estimated: true };
-        }
-
-        return { nextHighTide, nextLowTide };
-      } catch (e) {
-        console.warn('Tide prediction failed:', e);
-        return null;
-      }
-    }
-
-    function renderCountdown() {
-      if (!nextHighTide && !nextLowTide) return '';
-      const highCountdown = formatCountdown(nextHighTide?.time);
-      const lowCountdown  = formatCountdown(nextLowTide?.time);
-      const highAt = nextHighTide ? formatTime(nextHighTide.time) : '--:--';
-      const lowAt  = nextLowTide  ? formatTime(nextLowTide.time)  : '--:--';
-      const highM  = nextHighTide?.value != null && typeof nextHighTide.value === 'number' ? `${nextHighTide.value.toFixed(2)}m` : '';
-      const lowM   = nextLowTide?.value  != null && typeof nextLowTide.value  === 'number' ? `${nextLowTide.value.toFixed(2)}m`  : '';
-
-      return `
-        <div class="countdown-section">
-          <div class="countdown-title">Next Tides</div>
-          <div class="countdown-row">
-            <div class="countdown-card">
-              <div class="countdown-type high">🔵 High Tide</div>
-              <div class="countdown-time" id="high-countdown">${highCountdown}</div>
-              <div class="countdown-eta">at ${highAt}</div>
-              ${highM ? `<div class="countdown-height">${highM}</div>` : ''}
-            </div>
-            <div class="countdown-card">
-              <div class="countdown-type low">🟡 Low Tide</div>
-              <div class="countdown-time" id="low-countdown">${lowCountdown}</div>
-              <div class="countdown-eta">at ${lowAt}</div>
-              ${lowM ? `<div class="countdown-height">${lowM}</div>` : ''}
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function startCountdownInterval() {
-      if (countdownInterval) clearInterval(countdownInterval);
-      countdownInterval = setInterval(() => {
-        const hEl = document.getElementById('high-countdown');
-        const lEl = document.getElementById('low-countdown');
-        if (hEl) hEl.textContent = formatCountdown(nextHighTide?.time);
-        if (lEl) lEl.textContent = formatCountdown(nextLowTide?.time);
-      }, 30000);
-    }
 
     // ─── Update time display ─────────────────────────────────────
     function updateTimeSinceDisplay() {
@@ -946,7 +808,7 @@
     }
 
     // ─── Display ─────────────────────────────────────────────────
-    function displayTideData(reading, station, trendData, weather, predictions) {
+    function displayTideData(reading, station, trendData, weather) {
       lastMeasuredValue = reading.value;
       tideRatePerMinute = trendData.ratePerMinute;
 
@@ -986,19 +848,15 @@
           </div>
 
           ${renderWeather(weather)}
-          ${renderCountdown()}
-
           <div class="station-info">
-            <div class="station-name">📍 ${station.label}</div>
+            <div class="station-name">Nearest Tidal Gauge:<br>📍 ${station.label}</div>
             <div class="last-updated">Last reading: ${reading.value.toFixed(2)}m at ${new Date(reading.dateTime).toLocaleString('en-GB',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})}</div>
             <div class="time-since-update" id="time-since-update">${getTimeSinceUpdate()}</div>
           </div>
         </div>
       `;
 
-      startTimeSinceInterval();
-      startCountdownInterval();
-      updateTimeSinceDisplay();
+      startTimeSinceInterval();      updateTimeSinceDisplay();
     }
 
     function displayError(msg) {
@@ -1020,14 +878,13 @@
             currentStation = station;
             content.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Getting tide data from ${station.label}...</p></div>`;
 
-            const [reading, trend, weather, predictions] = await Promise.all([
+            const [reading, trend, weather] = await Promise.all([
               getTideReading(station.notation),
               getTideTrend(station.notation),
               getWeather(lat, lon),
-              getTidePredictions(station.notation)
             ]);
             lastUpdateTime = new Date(reading.dateTime);
-            displayTideData(reading, station, trend, weather, predictions);
+            displayTideData(reading, station, trend, weather);
             return;
           }
         }
@@ -1049,14 +906,13 @@
 
         content.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Loading all data...</p></div>`;
 
-        const [reading, trend, weather, predictions] = await Promise.all([
+        const [reading, trend, weather] = await Promise.all([
           getTideReading(station.notation),
           getTideTrend(station.notation),
           getWeather(lat, lon),
-          getTidePredictions(station.notation)
         ]);
         lastUpdateTime = new Date(reading.dateTime);
-        displayTideData(reading, station, trend, weather, predictions);
+        displayTideData(reading, station, trend, weather);
 
       } catch (error) {
         console.error('Error:', error);
