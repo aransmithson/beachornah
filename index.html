@@ -1,932 +1,1423 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Beach or Nah</title>
-
-  <!-- 🏖️ Beach emoji favicon via SVG -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏖️</text></svg>">
-
-  <!-- PWA manifest injected as Blob URL by JS below -->
-  <meta name="theme-color" content="#87CEEB" id="theme-color-meta">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Beach or Nah">
-
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Poppins:wght@400;600&display=swap');
-
-    :root {
-      --bg-sky-top: #87CEEB;
-      --bg-sky-mid: #BEE7E8;
-      --bg-sand: #F6E7C1;
-      --card-bg: rgba(255,255,255,0.15);
-      --card-border: rgba(255,255,255,0.2);
-      --content-bg: white;
-      --text-primary: #2c3e50;
-      --text-secondary: #7f8c8d;
-      --text-muted: #95a5a6;
-      --divider: #ecf0f1;
-      --shadow: rgba(0,0,0,0.3);
-      --btn-bg: rgba(255,255,255,0.25);
-      --btn-hover: rgba(255,255,255,0.35);
-      --weather-bg: #f0f8ff;
-      --weather-border: #ddeeff;
-      --tide-label: #64748b;
-    }
-
-    [data-theme="dark"] {
-      --bg-sky-top: #0d1b2a;
-      --bg-sky-mid: #1b2d42;
-      --bg-sand: #2a2318;
-      --card-bg: rgba(255,255,255,0.07);
-      --card-border: rgba(255,255,255,0.1);
-      --content-bg: #1e2a38;
-      --text-primary: #e8f4fd;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --divider: #2d3748;
-      --shadow: rgba(0,0,0,0.6);
-      --btn-bg: rgba(255,255,255,0.1);
-      --btn-hover: rgba(255,255,255,0.18);
-      --weather-bg: rgba(255,255,255,0.05);
-      --weather-border: rgba(255,255,255,0.08);
-      --tide-label: #94a3b8;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: 'Poppins', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(180deg, var(--bg-sky-top) 0%, var(--bg-sky-mid) 45%, var(--bg-sand) 100%);
-      position: relative;
-      overflow-x: hidden;
-      transition: background 0.5s ease;
-    }
-
-    body::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image:
-        radial-gradient(circle at 20% 30%, rgba(255,255,255,0.15), transparent 40%),
-        radial-gradient(circle at 80% 70%, rgba(255,255,255,0.1), transparent 45%);
-      z-index: 0;
-      pointer-events: none;
-    }
-
-    /* Stars overlay for dark mode */
-    body::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image:
-        radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px),
-        radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px),
-        radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px);
-      background-size: 200px 200px, 150px 150px, 100px 100px;
-      background-position: 0 0, 80px 60px, 40px 120px;
-      opacity: 0;
-      transition: opacity 0.5s ease;
-      z-index: 0;
-      pointer-events: none;
-    }
-
-    [data-theme="dark"] body::after { opacity: 1; }
-
-    .container {
-      position: relative;
-      z-index: 1;
-      width: 90%;
-      max-width: 440px;
-      animation: fadeIn 0.6s ease-out;
-      padding: 20px 0 80px;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .card {
-      background: var(--card-bg);
-      backdrop-filter: blur(20px);
-      border-radius: 32px;
-      padding: 32px 28px;
-      box-shadow: 0 20px 60px var(--shadow);
-      border: 1px solid var(--card-border);
-      position: relative;
-      overflow: hidden;
-      transition: background 0.5s, border-color 0.5s, box-shadow 0.5s;
-    }
-
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, #ffd700, #ff6b6b, #4ecdc4, #ffd700);
-      background-size: 200% 100%;
-      animation: shimmer 3s infinite;
-    }
-
-    @keyframes shimmer {
-      0%, 100% { background-position: 0% 0%; }
-      50% { background-position: 100% 0%; }
-    }
-
-    /* Header */
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 28px;
-    }
-
-    .title-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .emoji-icon {
-      font-size: 42px;
-      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
-      animation: float 3s ease-in-out infinite;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-8px); }
-    }
-
-    h1 {
-      font-family: 'Fredoka', sans-serif;
-      font-size: 32px;
-      font-weight: 700;
-      color: white;
-      text-shadow: 0 3px 10px rgba(0,0,0,0.3);
-      letter-spacing: -0.5px;
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .icon-btn {
-      background: var(--btn-bg);
-      border: none;
-      border-radius: 50%;
-      width: 44px;
-      height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      flex-shrink: 0;
-    }
-
-    .icon-btn:hover { background: var(--btn-hover); transform: scale(1.05); }
-    .icon-btn:active { transform: scale(0.95); }
-    .icon-btn svg { width: 20px; height: 20px; stroke: white; stroke-width: 2.5; fill: none; }
-
-    .refresh-btn:active { transform: rotate(180deg) scale(1.05); }
-
-    /* Dark mode toggle moon/sun */
-    .dark-icon-moon { display: block; }
-    .dark-icon-sun { display: none; }
-    [data-theme="dark"] .dark-icon-moon { display: none; }
-    [data-theme="dark"] .dark-icon-sun { display: block; }
-
-    /* Content card */
-    .content {
-      background: var(--content-bg);
-      border-radius: 24px;
-      padding: 28px 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-      animation: slideUp 0.5s ease-out 0.2s both;
-      transition: background 0.5s;
-    }
-
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .loading, .error {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--text-secondary);
-      font-size: 16px;
-    }
-
-    .loading-spinner {
-      width: 50px; height: 50px;
-      border: 4px solid #e0e0e0;
-      border-top-color: #667eea;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 16px;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .error { color: #e74c3c; }
-
-    /* Tide display */
-    .tide-data { text-align: center; }
-
-    .height-value {
-      font-family: 'Fredoka', sans-serif;
-      font-size: 72px;
-      font-weight: 700;
-      line-height: 1;
-      color: var(--text-primary);
-      transition: color 0.5s;
-    }
-
-    .height-unit {
-      font-size: 32px;
-      color: var(--text-secondary);
-      margin-left: -4px;
-    }
-
-    .tide-status {
-      font-family: 'Fredoka', sans-serif;
-      font-size: 26px;
-      font-weight: 700;
-      color: #27ae60;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin: 12px 0 20px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    /* Tide chart */
-    .tide-chart {
-      position: relative;
-      height: 180px;
-      margin-bottom: 20px;
-      overflow: hidden;
-      border-radius: 16px;
-      background: linear-gradient(to bottom, #f4e4c1 0%, #e8d4a0 50%, #d4c19a 100%);
-      box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    [data-theme="dark"] .tide-chart {
-      background: linear-gradient(to bottom, #2a1f0e 0%, #1e1508 100%);
-    }
-
-    .wave {
-      position: absolute;
-      bottom: 0; left: 0;
-      width: 100%;
-      transition: height 0.6s ease;
-      z-index: 2;
-      overflow: visible;
-    }
-
-    .arrow-in-water {
-      position: absolute;
-      left: 50%; top: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 44px;
-      color: rgba(255,255,255,0.85);
-      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      z-index: 3;
-      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
-    }
-
-    .arrow-in-water.up { transform: translate(-50%, -50%) rotate(180deg); }
-
-    /* Weather strip */
-    .weather-strip {
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      background: var(--weather-bg);
-      border: 1px solid var(--weather-border);
-      border-radius: 16px;
-      padding: 14px 10px;
-      margin-bottom: 18px;
-      gap: 4px;
-      transition: background 0.5s, border-color 0.5s;
-    }
-
-    .weather-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      flex: 1;
-    }
-
-    .weather-icon { font-size: 22px; line-height: 1; }
-
-    .weather-label {
-      font-size: 10px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 600;
-    }
-
-    .weather-value {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-primary);
-      transition: color 0.5s;
-    }
-
-    .weather-divider {
-      width: 1px;
-      height: 40px;
-      background: var(--divider);
-    }
-
-
-    /* Station info */
-    .station-info {
-      text-align: center;
-      padding-top: 16px;
-      border-top: 2px solid var(--divider);
-      transition: border-color 0.5s;
-    }
-
-    .station-name {
-      font-size: 13px;
-      color: var(--text-secondary);
-      font-weight: 600;
-      margin-bottom: 5px;
-      transition: color 0.5s;
-    }
-
-    .last-updated {
-      font-size: 11px;
-      color: var(--text-muted);
-      transition: color 0.5s;
-    }
-
-    .time-since-update {
-      font-size: 10px;
-      color: var(--text-muted);
-      margin-top: 3px;
-      font-style: italic;
-      transition: color 0.5s;
-    }
-
-    /* PWA Install Banner */
-    .install-banner {
-      display: none;
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(30, 42, 56, 0.95);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 20px;
-      padding: 14px 20px;
-      z-index: 100;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-      width: 90%;
-      max-width: 400px;
-      animation: slideUpBanner 0.4s ease-out;
-    }
-
-    @keyframes slideUpBanner {
-      from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-      to { opacity: 1; transform: translateX(-50%) translateY(0); }
-    }
-
-    .install-banner.visible { display: flex; align-items: center; gap: 14px; }
-
-    .install-banner-text { flex: 1; }
-    .install-banner-title {
-      font-weight: 700;
-      font-size: 14px;
-      color: white;
-      margin-bottom: 2px;
-    }
-
-    .install-banner-sub {
-      font-size: 12px;
-      color: rgba(255,255,255,0.6);
-    }
-
-    .install-btn {
-      background: linear-gradient(135deg, #4ecdc4, #44a7b8);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
-      font-family: 'Poppins', sans-serif;
-      transition: transform 0.2s, opacity 0.2s;
-    }
-
-    .install-btn:hover { transform: scale(1.03); opacity: 0.95; }
-
-    .install-dismiss {
-      background: none;
-      border: none;
-      color: rgba(255,255,255,0.4);
-      cursor: pointer;
-      font-size: 18px;
-      padding: 0 2px;
-      line-height: 1;
-    }
-
-    .install-dismiss:hover { color: rgba(255,255,255,0.7); }
-
-    /* iOS install tip */
-    .ios-install-tip {
-      display: none;
-      background: rgba(30, 42, 56, 0.95);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 20px;
-      padding: 16px 20px;
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 90%;
-      max-width: 400px;
-      z-index: 100;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-      text-align: center;
-      animation: slideUpBanner 0.4s ease-out;
-    }
-
-    .ios-install-tip.visible { display: block; }
-
-    .ios-tip-title {
-      font-weight: 700;
-      color: white;
-      font-size: 14px;
-      margin-bottom: 8px;
-    }
-
-    .ios-tip-steps {
-      font-size: 12px;
-      color: rgba(255,255,255,0.7);
-      line-height: 1.8;
-    }
-
-    .ios-close {
-      margin-top: 12px;
-      background: none;
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 10px;
-      color: rgba(255,255,255,0.6);
-      font-size: 12px;
-      padding: 6px 16px;
-      cursor: pointer;
-      font-family: 'Poppins', sans-serif;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>UK Crime Map</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  [data-theme="dark"] {
+    --bg: #0a0c0f;
+    --surface: #111418;
+    --border: #2a3140;
+    --accent: #ff3b3b;
+    --accent-hover: #cc2020;
+    --accent-bg: rgba(255,59,59,0.08);
+    --accent-border: rgba(255,59,59,0.25);
+    --accent-filter-bg: rgba(255,59,59,0.06);
+    --accent-filter-active: rgba(255,59,59,0.1);
+    --text: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-dim: #64748b;
+    --text-on-accent: #fff;
+    --btn-disabled-bg: #2a1010;
+    --btn-disabled-border: #3a1515;
+    --btn-disabled-text: #664444;
+    --item-hover: rgba(255,255,255,0.03);
+    --overlay-bg: rgba(0,0,0,0.75);
+    --modal-shadow: rgba(0,0,0,0.7);
+    --scrollbar-track: #0a0c0f;
+    --scrollbar-thumb: #2a3140;
+    --input-scheme: dark;
+    --map-bg: #0d1117;
+    --tile-filter: brightness(0.85) saturate(0.5);
+    --attribution-bg: rgba(10,12,15,0.7);
+    --mono: 'Share Tech Mono', monospace;
+    --sans: 'Barlow Condensed', sans-serif;
+  }
+
+  [data-theme="light"] {
+    --bg: #f1f5f9;
+    --surface: #ffffff;
+    --border: #cbd5e1;
+    --accent: #dc2626;
+    --accent-hover: #b91c1c;
+    --accent-bg: rgba(220,38,38,0.06);
+    --accent-border: rgba(220,38,38,0.2);
+    --accent-filter-bg: rgba(220,38,38,0.04);
+    --accent-filter-active: rgba(220,38,38,0.1);
+    --text: #1e293b;
+    --text-secondary: #475569;
+    --text-dim: #64748b;
+    --text-on-accent: #fff;
+    --btn-disabled-bg: #fde8e8;
+    --btn-disabled-border: #f8b4b4;
+    --btn-disabled-text: #c28080;
+    --item-hover: rgba(0,0,0,0.03);
+    --overlay-bg: rgba(0,0,0,0.45);
+    --modal-shadow: rgba(0,0,0,0.15);
+    --scrollbar-track: #f1f5f9;
+    --scrollbar-thumb: #cbd5e1;
+    --input-scheme: light;
+    --map-bg: #e8ecf1;
+    --tile-filter: brightness(1) saturate(1);
+    --attribution-bg: rgba(255,255,255,0.7);
+    --mono: 'Share Tech Mono', monospace;
+    --sans: 'Barlow Condensed', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    z-index: 1000;
+    flex-wrap: wrap;
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  .logo span { color: var(--text-dim); }
+
+  .controls {
+    display: flex;
+    gap: 6px;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  #theme-toggle {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    line-height: 1;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #theme-toggle:hover { border-color: var(--accent); color: var(--text); }
+
+  #help-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    line-height: 1;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #help-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  /* ── HELP / EXPLAINER PAGE ─────────────────────────────────────────────── */
+  #help-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--overlay-bg);
+    z-index: 3500;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
+  }
+
+  #help-backdrop.visible { display: flex; }
+
+  #help-page {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 32px 28px 28px;
+    max-width: 480px;
+    width: 100%;
+    margin: 20px auto;
+    box-shadow: 0 8px 40px var(--modal-shadow);
+    animation: modal-in 0.25s ease;
+  }
+
+  .help-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .help-top .modal-title { margin-bottom: 0; }
+
+  .help-close {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    letter-spacing: 0;
+  }
+
+  .help-close:hover { color: var(--text); }
+
+  .help-section {
+    margin-bottom: 20px;
+  }
+
+  .help-section-title {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .help-section p {
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    color: var(--text);
+    line-height: 1.65;
+    margin-bottom: 8px;
+  }
+
+  .help-section p:last-child { margin-bottom: 0; }
+
+  .help-key {
+    display: inline-block;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 7px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    vertical-align: baseline;
+  }
+
+  .help-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-right: 3px;
+  }
+
+  .help-footer {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .help-footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .help-footer a:hover { text-decoration: underline; }
+
+  input[type="month"],
+  input[type="text"] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    padding: 6px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    color-scheme: var(--input-scheme);
+  }
+
+  input[type="month"] {
+    width: auto;
+    min-width: 0;
+    max-width: 160px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  input[type="text"] {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  input[type="text"]::placeholder { color: var(--text-dim); text-transform: none; letter-spacing: 0; }
+
+  input:hover, input:focus { border-color: var(--accent); outline: none; }
+
+  input.error { border-color: #ff6b6b; animation: shake 0.3s ease; }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25%      { transform: translateX(-4px); }
+    75%      { transform: translateX(4px); }
+  }
+
+  button {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    white-space: nowrap;
+  }
+
+  button:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
+
+  .btn-accent {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: var(--text-on-accent) !important;
+  }
+
+  .btn-accent:hover:not(:disabled) { background: var(--accent-hover) !important; border-color: var(--accent-hover) !important; }
+  .btn-accent:disabled { background: var(--btn-disabled-bg) !important; border-color: var(--btn-disabled-border) !important; color: var(--btn-disabled-text) !important; cursor: not-allowed; }
+
+  .divider {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    padding: 0 2px;
+  }
+
+  #change-loc-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    letter-spacing: 0.04em;
+  }
+
+  #change-loc-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  #map { flex: 1; position: relative; z-index: 1; }
+
+  .locating-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .locating-overlay.active { display: flex; }
+
+  .pulse-ring {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    animation: pulse-out 1.4s ease-out infinite;
+  }
+
+  @keyframes pulse-out {
+    0%   { transform: scale(0.3); opacity: 1; }
+    100% { transform: scale(2.5); opacity: 0; }
+  }
+
+  #panel {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    max-height: 38vh;
+    overflow-y: auto;
+    transition: max-height 0.3s ease, background 0.3s, border-color 0.3s;
+  }
+
+  #panel.collapsed { max-height: 40px; overflow: hidden; }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 10;
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  .panel-title {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.1em;
+  }
+
+  .panel-count {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+  }
+
+  .toggle-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+  }
+
+  #stats {
+    display: flex;
+    overflow-x: auto;
+    padding: 8px 12px;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  #stats::-webkit-scrollbar { display: none; }
+  #stats:empty { display: none; }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 12px;
+    border-right: 1px solid var(--border);
+    min-width: 70px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .stat-item:last-child { border-right: none; }
+  .stat-item:hover { background: var(--accent-filter-bg); }
+  .stat-item.active { background: var(--accent-filter-active); }
+
+  .stat-num {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    color: var(--accent);
+    line-height: 1.1;
+  }
+
+  .stat-label {
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: center;
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+
+  #crime-list { padding: 8px 12px; }
+
+  .crime-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+
+  .crime-item:hover { background: var(--item-hover); }
+  .crime-item:last-child { border-bottom: none; }
+
+  .crime-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+
+  .crime-info { flex: 1; min-width: 0; }
+
+  .crime-cat {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .crime-meta {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  .crime-outcome {
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    font-style: italic;
+    margin-top: 2px;
+  }
+
+  #status {
+    text-align: center;
+    padding: 30px 20px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 2;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .leaflet-container { background: var(--map-bg) !important; }
+  .leaflet-tile-pane { filter: var(--tile-filter); transition: filter 0.3s; }
+  .leaflet-interactive { cursor: pointer !important; pointer-events: auto !important; }
+  .leaflet-overlay-pane svg path { pointer-events: all !important; }
+
+  .leaflet-popup-content-wrapper {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 4px !important;
+    color: var(--text) !important;
+    box-shadow: 0 4px 20px var(--modal-shadow) !important;
+  }
+
+  .leaflet-popup-tip { background: var(--surface) !important; }
+
+  .popup-cat {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  .popup-row {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  .leaflet-control-zoom a {
+    background: var(--surface) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+  }
+
+  .leaflet-control-attribution {
+    background: var(--attribution-bg) !important;
+    color: var(--text-dim) !important;
+    font-size: 0.6rem !important;
+  }
+
+  #panel::-webkit-scrollbar { width: 4px; }
+  #panel::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+  #panel::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 2px; }
+
+  /* ── WELCOME / LOCATION MODAL ──────────────────────────────────────────── */
+  #welcome-backdrop {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: var(--overlay-bg);
+    z-index: 3000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  #welcome-backdrop.hidden { display: none; }
+
+  #welcome-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 32px 26px 22px;
+    max-width: 380px;
+    width: 100%;
+    box-shadow: 0 8px 40px var(--modal-shadow);
+    animation: modal-in 0.25s ease;
+  }
+
+  .welcome-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .welcome-x {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    letter-spacing: 0;
+    display: none;
+  }
+
+  .welcome-x:hover { color: var(--text); }
+  .welcome-x.visible { display: block; }
+
+  .welcome-help {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .welcome-help:hover { border-color: var(--accent); color: var(--text); }
+
+  .loc-input-group {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .loc-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .loc-row input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 12px;
+    font-size: 0.85rem;
+  }
+
+  .loc-row #postcode-btn {
+    padding: 9px 16px;
+    font-size: 0.82rem;
+  }
+
+  .loc-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 2px 0;
+  }
+
+  .loc-divider::before,
+  .loc-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .loc-divider span {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  #locate-btn {
+    width: 100%;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+
+  /* ── NO DATA TOOLTIP ──────────────────────────────────────────────────── */
+  #no-data-tooltip {
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    right: -20px;
+    z-index: 2000;
+    width: 300px;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 16px 18px;
+    box-shadow: 0 8px 30px var(--modal-shadow);
+    animation: tooltip-in 0.25s ease;
+  }
+
+  #no-data-tooltip.visible { display: block; }
+
+  #no-data-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -7px;
+    right: 32px;
+    width: 12px;
+    height: 12px;
+    background: var(--surface);
+    border-left: 1px solid var(--accent);
+    border-top: 1px solid var(--accent);
+    transform: rotate(45deg);
+  }
+
+  @keyframes tooltip-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .tooltip-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .tooltip-title {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .tooltip-x {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    letter-spacing: 0;
+  }
+
+  .tooltip-x:hover { color: var(--text); }
+
+  .tooltip-body {
+    font-family: var(--sans);
+    font-size: 0.88rem;
+    color: var(--text);
+    line-height: 1.5;
+    margin-bottom: 6px;
+  }
+
+  .tooltip-sub {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .tooltip-highlight {
+    display: inline-block;
+    background: var(--accent-bg);
+    border: 1px solid var(--accent-border);
+    border-radius: 3px;
+    padding: 1px 6px;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* pulse highlight on month input when tooltip shows */
+  #monthInput.highlight {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-bg);
+    transition: box-shadow 0.3s, border-color 0.3s;
+  }
+
+  @keyframes modal-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal-icon { font-size: 2rem; margin-bottom: 12px; }
+
+  .modal-title {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .modal-body {
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 6px;
+  }
+
+  .modal-sub {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+
+  .modal-close {
+    background: var(--accent);
+    border: none;
+    border-radius: 3px;
+    color: var(--text-on-accent);
+    font-family: var(--sans);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 8px 20px;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.15s;
+  }
+
+  .modal-close:hover { background: var(--accent-hover); }
+</style>
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <div class="header">
-        <div class="title-wrapper">
-          <div class="emoji-icon">🏖️</div>
-          <h1>Beach or Nah</h1>
-        </div>
-        <div class="header-actions">
-          <!-- Dark mode toggle -->
-          <button class="icon-btn" id="darkModeBtn" onclick="toggleDarkMode()" title="Toggle dark mode">
-            <svg class="dark-icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            <svg class="dark-icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          </button>
-          <!-- Install PWA -->
-          <button class="icon-btn" id="installBtn" onclick="triggerInstall()" title="Add to Home Screen" style="display:none">
-            <svg viewBox="0 0 24 24"><path d="M12 2v13M8 11l4 4 4-4"/><rect x="3" y="17" width="18" height="4" rx="1"/></svg>
-          </button>
-          <!-- Refresh -->
-          <button class="icon-btn refresh-btn" onclick="refreshTide()" title="Refresh tide data">
-            <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
-          </button>
-        </div>
-      </div>
 
-      <div class="content" id="content">
-        <div class="loading">
-          <div class="loading-spinner"></div>
-          <p>Finding your nearest tide station...</p>
+<header>
+  <div class="logo">UK CRIME <span>MAP</span></div>
+  <div class="controls">
+    <div id="month-wrapper" style="position:relative">
+      <input type="month" id="monthInput" />
+      <!-- NO DATA TOOLTIP (points at month picker) -->
+      <div id="no-data-tooltip">
+        <div class="tooltip-header">
+          <span class="tooltip-title">// No Data</span>
+          <button class="tooltip-x" onclick="closeTooltip()">&#x2715;</button>
         </div>
+        <div class="tooltip-body" id="tooltip-body">No crime records found for this area and date.</div>
+        <div class="tooltip-sub" id="tooltip-sub">Try selecting an earlier month &#x2191;</div>
       </div>
     </div>
-  </div>
 
-  <!-- PWA install banners -->
-  <div class="install-banner" id="installBanner">
-    <div class="install-banner-text">
-      <div class="install-banner-title">🏖️ Add to Home Screen</div>
-      <div class="install-banner-sub">Check tides instantly, anytime</div>
+    <button id="change-loc-btn" onclick="openLocationModal()">&#x1F4CD; SET LOCATION</button>
+
+    <button id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">&#x1F319;</button>
+    <button id="help-btn" onclick="openHelp()" title="How to use UK Crime Map">?</button>
+  </div>
+</header>
+
+<div id="map">
+  <div class="locating-overlay" id="locating-overlay">
+    <div class="pulse-ring"></div>
+  </div>
+</div>
+
+<div id="panel">
+  <div class="panel-header" onclick="togglePanel()">
+    <span class="panel-title">// INCIDENT LOG</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="panel-count" id="panel-count">&mdash;</span>
+      <button class="toggle-btn" id="toggle-icon">&#x25BC;</button>
     </div>
-    <button class="install-btn" onclick="triggerInstall()">Install</button>
-    <button class="install-dismiss" onclick="dismissInstall()">✕</button>
   </div>
+  <div id="stats"></div>
+  <div id="crime-list"></div>
+</div>
 
-  <div class="ios-install-tip" id="iosInstallTip">
-    <div class="ios-tip-title">📲 Add Beach or Nah to your Home Screen</div>
-    <div class="ios-tip-steps">
-      1. Tap the <strong>Share</strong> button (□↑) at the bottom<br>
-      2. Scroll down and tap <strong>"Add to Home Screen"</strong><br>
-      3. Tap <strong>Add</strong> — done! 🏖️
+<!-- HELP / EXPLAINER PAGE -->
+<div id="help-backdrop" onclick="closeHelp()">
+  <div id="help-page" onclick="event.stopPropagation()">
+    <div class="help-top">
+      <div class="modal-title">// How It Works</div>
+      <button class="help-close" onclick="closeHelp()">&#x2715;</button>
     </div>
-    <button class="ios-close" onclick="dismissInstall()">Got it</button>
+
+    <div class="help-section">
+      <div class="help-section-title">Getting Started</div>
+      <p>Tap <span class="help-key">&#x1F4CD; SET LOCATION</span> to enter a UK postcode or use your device's GPS. UK Crime Map will fetch all reported crimes within roughly a mile of that point.</p>
+    </div>
+
+    <div class="help-section">
+      <div class="help-section-title">Choosing a Date</div>
+      <p>Use the month picker in the header to select a time period. Crime data is published by the Home Office and typically lags <strong>2&ndash;3 months</strong> behind the current date, so the picker defaults to two months ago.</p>
+      <p>If no data is returned, a tooltip will appear suggesting you try an earlier month.</p>
+    </div>
+
+    <div class="help-section">
+      <div class="help-section-title">Reading the Map</div>
+      <p>Each <span class="help-dot" style="background:#ff6b6b"></span>coloured dot represents a reported crime. Colours indicate the category &mdash; for example <span class="help-dot" style="background:#d63031"></span>red for violent crime, <span class="help-dot" style="background:#0984e3"></span>blue for vehicle crime, <span class="help-dot" style="background:#a29bfe"></span>purple for drugs. Tap any dot to see the category, street, date, and outcome.</p>
+    </div>
+
+    <div class="help-section">
+      <div class="help-section-title">Filtering &amp; Incident Log</div>
+      <p>The category chips below the map show a breakdown by type. Tap a chip to filter the map and the incident list to just that category. Tap <span class="help-key">ALL</span> to reset.</p>
+      <p>The incident log at the bottom lists up to 100 crimes. Tap any row to fly to that location on the map.</p>
+    </div>
+
+    <div class="help-section">
+      <div class="help-section-title">Other Controls</div>
+      <p>The <span class="help-key">&#x2600;&#xFE0F;</span> / <span class="help-key">&#x1F319;</span> button toggles between light and dark mode. Your preference is saved between sessions.</p>
+    </div>
+
+    <div class="help-footer">
+      Data source: <a href="https://data.police.uk" target="_blank" rel="noopener">data.police.uk</a> (UK Police Street-Level Crime API)<br>
+      Map tiles: <a href="https://carto.com" target="_blank" rel="noopener">CARTO</a><br>
+      Postcode lookup: <a href="https://postcodes.io" target="_blank" rel="noopener">postcodes.io</a><br><br>
+      Crime locations are anonymised by the Home Office to the nearest map point and may not reflect exact addresses.
+    </div>
   </div>
+</div>
 
-  <script>
-    const EA_API_BASE = 'https://environment.data.gov.uk/flood-monitoring';
-    const OWM_BASE = 'https://api.open-meteo.com/v1/forecast';
+<!-- WELCOME / LOCATION MODAL -->
+<div id="welcome-backdrop">
+  <div id="welcome-modal" onclick="event.stopPropagation()">
+    <div class="welcome-top">
+      <div class="modal-icon">&#x1F693;</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="welcome-help" onclick="closeWelcome();openHelp()" title="How to use UK Crime Map">?</button>
+        <button class="welcome-x" id="welcome-x" onclick="closeWelcome()" title="Close">&#x2715;</button>
+      </div>
+    </div>
+    <div class="modal-title">// UK Crime Map</div>
+    <div class="modal-body">Enter a postcode or use your current location to view nearby crime data.</div>
+    <div class="modal-sub">Powered by the UK Police Data API &middot; Crime data is published by the Home Office and typically lags <span style="color:var(--text)">2&ndash;3 months</span> behind the current date. The month picker defaults to the most recent period likely to have data.</div>
 
-    let currentStation = null;
-    let lastUpdateTime = null;
-    let timeSinceUpdateInterval = null;
-    let tideRatePerMinute = 0;
-    let lastMeasuredValue = 0;
-    let deferredPrompt = null;
+    <div class="loc-input-group">
+      <div class="loc-row">
+        <input type="text" id="postcodeInput" placeholder="Enter postcode" maxlength="8"
+               onkeydown="if(event.key==='Enter') lookupPostcode()" />
+        <button id="postcode-btn" class="btn-accent" onclick="lookupPostcode()">GO</button>
+      </div>
 
-    // ─── PWA Manifest (Blob URL — works from a single HTML file) ──
-    (function injectManifest() {
-      const iconSvg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏖️</text></svg>`;
-      const iconUrl = 'data:image/svg+xml,' + encodeURIComponent(iconSvg);
-      const manifest = {
-        name: 'Beach or Nah',
-        short_name: 'Beach?',
-        description: 'Check your local tide at a glance',
-        start_url: location.href,
-        display: 'standalone',
-        orientation: 'portrait',
-        background_color: '#87CEEB',
-        theme_color: '#87CEEB',
-        icons: [
-          { src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }
-        ]
-      };
-      const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-      const url  = URL.createObjectURL(blob);
-      const link = document.createElement('link');
-      link.rel = 'manifest';
-      link.href = url;
-      document.head.appendChild(link);
-    })();
+      <div class="loc-divider"><span>or</span></div>
 
-    // ─── Dark mode ────────────────────────────────────────────────
-    function initDarkMode() {
-      const saved = localStorage.getItem('beachDarkMode');
-      // Default is light mode; only go dark if explicitly saved as dark
-      if (saved === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
+      <button id="locate-btn" class="btn-accent" onclick="loadCrimesNearMe()">&#x1F4CD; USE MY LOCATION</button>
+    </div>
+  </div>
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const CAT_COLORS = {
+  'anti-social-behaviour':  '#ff6b6b',
+  'bicycle-theft':          '#ffa94d',
+  'burglary':               '#ff3b3b',
+  'criminal-damage-arson':  '#ff6348',
+  'drugs':                  '#a29bfe',
+  'other-theft':            '#fab1a0',
+  'possession-of-weapons':  '#fd79a8',
+  'public-order':           '#fdcb6e',
+  'robbery':                '#e17055',
+  'shoplifting':            '#00cec9',
+  'theft-from-the-person':  '#74b9ff',
+  'vehicle-crime':          '#0984e3',
+  'violent-crime':          '#d63031',
+  'other-crime':            '#636e72',
+  'default':                '#b2bec3'
+};
+
+function catColor(cat) { return CAT_COLORS[cat] || CAT_COLORS['default']; }
+function catLabel(cat) { return cat.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); }
+
+// ── THEME ─────────────────────────────────────────────────────────────────────
+const THEME_KEY = 'crimemap_theme';
+let currentTheme = localStorage.getItem(THEME_KEY) || 'light';
+let darkTileLayer, lightTileLayer;
+
+function applyTheme(theme) {
+  currentTheme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('theme-toggle');
+  btn.textContent = theme === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19';
+  localStorage.setItem(THEME_KEY, theme);
+  if (darkTileLayer && lightTileLayer) {
+    if (theme === 'dark') {
+      map.removeLayer(lightTileLayer);
+      map.addLayer(darkTileLayer);
+    } else {
+      map.removeLayer(darkTileLayer);
+      map.addLayer(lightTileLayer);
+    }
+  }
+}
+
+function toggleTheme() {
+  applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+}
+
+// ── MAP ───────────────────────────────────────────────────────────────────────
+const map = L.map('map', { center: [54.5, -3], zoom: 5, tapTolerance: 20 });
+
+darkTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '\u00a9 <a href="https://carto.com/">CARTO</a>',
+  subdomains: 'abcd', maxZoom: 19
+});
+
+lightTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '\u00a9 <a href="https://carto.com/">CARTO</a>',
+  subdomains: 'abcd', maxZoom: 19
+});
+
+(currentTheme === 'dark' ? darkTileLayer : lightTileLayer).addTo(map);
+
+const markers = L.layerGroup().addTo(map);
+let allCrimes = [];
+let activeFilter = null;
+let panelCollapsed = false;
+let userMarker = null;
+let hasSetLocation = false;
+
+applyTheme(currentTheme);
+
+// ── LOCATION CACHE ────────────────────────────────────────────────────────────
+const CACHE_KEY = 'crimemap_location';
+
+function saveLocation(lat, lng, label) {
+  sessionStorage.setItem(CACHE_KEY, JSON.stringify({ lat, lng, label }));
+  hasSetLocation = true;
+  updateChangeLocBtn();
+}
+
+function loadCachedLocation() {
+  try { return JSON.parse(sessionStorage.getItem(CACHE_KEY)); }
+  catch { return null; }
+}
+
+function clearLocation() {
+  sessionStorage.removeItem(CACHE_KEY);
+  if (userMarker) { userMarker.remove(); userMarker = null; }
+  hasSetLocation = false;
+  updateChangeLocBtn();
+  setBadge('Location cleared');
+}
+
+function updateChangeLocBtn() {
+  document.getElementById('change-loc-btn').innerHTML =
+    hasSetLocation ? '\uD83D\uDCCD CHANGE' : '\uD83D\uDCCD SET LOCATION';
+}
+
+// ── HELP PAGE ─────────────────────────────────────────────────────────────────
+function openHelp() {
+  document.getElementById('help-backdrop').classList.add('visible');
+}
+
+function closeHelp() {
+  document.getElementById('help-backdrop').classList.remove('visible');
+}
+
+// ── WELCOME / LOCATION MODAL ──────────────────────────────────────────────────
+function openLocationModal() {
+  const bd = document.getElementById('welcome-backdrop');
+  bd.classList.remove('hidden');
+  bd.style.display = 'flex';
+  document.getElementById('welcome-x').classList.add('visible');
+  setTimeout(function() { document.getElementById('postcodeInput').focus(); }, 100);
+}
+
+function closeWelcome() {
+  var bd = document.getElementById('welcome-backdrop');
+  bd.classList.add('hidden');
+  bd.style.display = 'none';
+}
+
+// ── DEFAULT MONTH ─────────────────────────────────────────────────────────────
+(function () {
+  var d = new Date();
+  d.setMonth(d.getMonth() - 2);
+  var monthEl = document.getElementById('monthInput');
+  var val = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  monthEl.value = val;
+  monthEl.max = val;
+
+  // Close tooltip when user changes the month
+  monthEl.addEventListener('change', function() { closeTooltip(); });
+
+  var cached = loadCachedLocation();
+  if (cached) {
+    hasSetLocation = true;
+    updateChangeLocBtn();
+    document.getElementById('welcome-x').classList.add('visible');
+  }
+})();
+
+// ── NEAR ME ───────────────────────────────────────────────────────────────────
+function loadCrimesNearMe() {
+  var month = document.getElementById('monthInput').value;
+  if (!month) { setBadge('Select a month first'); return; }
+
+  var cached = loadCachedLocation();
+  if (cached) {
+    closeWelcome();
+    setBadge('Using saved location: ' + cached.label);
+    placeUserPin(cached.lat, cached.lng, cached.label);
+    fetchCrimes(cached.lat, cached.lng, month);
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    setBadge('Geolocation not supported \u2014 try entering a postcode');
+    return;
+  }
+
+  var btn = document.getElementById('locate-btn');
+  btn.disabled = true;
+  btn.textContent = 'LOCATING...';
+  setBadge('Getting your location...');
+  document.getElementById('locating-overlay').classList.add('active');
+
+  navigator.geolocation.getCurrentPosition(
+    function(position) {
+      var lat = position.coords.latitude;
+      var lng = position.coords.longitude;
+      document.getElementById('locating-overlay').classList.remove('active');
+      btn.disabled = false;
+      btn.innerHTML = '\uD83D\uDCCD USE MY LOCATION';
+
+      saveLocation(lat, lng, 'Your Location');
+      placeUserPin(lat, lng, 'Your Location');
+      closeWelcome();
+      fetchCrimes(lat, lng, month);
+    },
+    function() {
+      document.getElementById('locating-overlay').classList.remove('active');
+      btn.disabled = false;
+      btn.innerHTML = '\uD83D\uDCCD USE MY LOCATION';
+      setBadge('Location denied \u2014 try entering a postcode instead');
+    },
+    { timeout: 10000 }
+  );
+}
+
+// ── POSTCODE ──────────────────────────────────────────────────────────────────
+async function lookupPostcode() {
+  var month = document.getElementById('monthInput').value;
+  if (!month) { setBadge('Select a month first'); return; }
+
+  var raw = document.getElementById('postcodeInput').value.trim().replace(/\s+/g, '');
+  if (!raw) {
+    flashError('postcodeInput');
+    setBadge('Enter a postcode first');
+    return;
+  }
+
+  var btn = document.getElementById('postcode-btn');
+  btn.disabled = true;
+  btn.textContent = '...';
+  setBadge('Looking up ' + raw.toUpperCase() + '...');
+
+  try {
+    var res = await fetch('https://api.postcodes.io/postcodes/' + encodeURIComponent(raw));
+    var json = await res.json();
+
+    if (json.status !== 200 || !json.result) {
+      flashError('postcodeInput');
+      setBadge('Postcode "' + raw.toUpperCase() + '" not found');
+      return;
     }
 
-    function toggleDarkMode() {
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      if (isDark) {
-        document.documentElement.removeAttribute('data-theme');
-        localStorage.setItem('beachDarkMode', 'light');
-        document.getElementById('theme-color-meta').content = '#87CEEB';
+    var lat = json.result.latitude;
+    var lng = json.result.longitude;
+    var postcode = json.result.postcode;
+    saveLocation(lat, lng, postcode);
+    placeUserPin(lat, lng, postcode);
+    closeWelcome();
+    fetchCrimes(lat, lng, month);
+    document.getElementById('postcodeInput').value = '';
+
+  } catch (e) {
+    flashError('postcodeInput');
+    setBadge('Postcode lookup failed \u2014 check your connection');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'GO';
+  }
+}
+
+function flashError(id) {
+  var el = document.getElementById(id);
+  el.classList.remove('error');
+  void el.offsetWidth;
+  el.classList.add('error');
+  setTimeout(function() { el.classList.remove('error'); }, 400);
+}
+
+// ── USER PIN ──────────────────────────────────────────────────────────────────
+function placeUserPin(lat, lng, label) {
+  if (userMarker) userMarker.remove();
+  var pinColor = currentTheme === 'dark' ? '#ffffff' : '#1e293b';
+  userMarker = L.circleMarker([lat, lng], {
+    radius: 9, fillColor: pinColor, color: '#ff3b3b',
+    weight: 2, fillOpacity: 1, zIndexOffset: 1000
+  }).addTo(map).bindPopup('<div class="popup-cat">\uD83D\uDCCD ' + label + '</div>');
+}
+
+// ── FETCH CRIMES ──────────────────────────────────────────────────────────────
+function fetchCrimes(lat, lng, month) {
+  var btn = document.getElementById('locate-btn');
+  btn.disabled = true;
+  closeTooltip();
+  setStatus('<span class="spinner"></span> Fetching crime data...');
+  document.getElementById('stats').innerHTML = '';
+  document.getElementById('panel-count').textContent = '\u2014';
+  markers.clearLayers();
+  allCrimes = [];
+  activeFilter = null;
+
+  map.setView([lat, lng], 14);
+
+  fetch('https://data.police.uk/api/crimes-street/all-crime?lat=' + lat + '&lng=' + lng + '&date=' + month)
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function(data) {
+      allCrimes = data;
+      setBadge(data.length + ' incidents \u00B7 ' + month);
+      if (!data.length) {
+        setStatus('');
+        document.getElementById('panel-count').textContent = '0';
+        showNoDataModal(month);
       } else {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        localStorage.setItem('beachDarkMode', 'dark');
-        document.getElementById('theme-color-meta').content = '#0d1b2a';
+        renderCrimes(data);
       }
-    }
-
-    // ─── PWA Install ─────────────────────────────────────────────
-    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      document.getElementById('installBtn').style.display = 'flex';
-      // Show banner after 3s if not already installed
-      setTimeout(() => {
-        if (!localStorage.getItem('beachInstallDismissed')) {
-          document.getElementById('installBanner').classList.add('visible');
-        }
-      }, 3000);
+    })
+    .catch(function(err) {
+      setStatus('\u26A0 Error fetching data. API may be unavailable or no data for this period.');
+      setBadge('Error');
+      console.error(err);
+    })
+    .finally(function() {
+      btn.disabled = false;
     });
+}
 
-    function triggerInstall() {
-      document.getElementById('installBanner').classList.remove('visible');
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
-      }
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderCrimes(crimes) {
+  markers.clearLayers();
+  if (!crimes.length) return;
+
+  document.getElementById('panel-count').textContent = crimes.length.toLocaleString() + ' incidents';
+
+  var cats = {};
+  crimes.forEach(function(c) { cats[c.category] = (cats[c.category] || 0) + 1; });
+  var sorted = Object.entries(cats).sort(function(a, b) { return b[1] - a[1]; });
+
+  var statsEl = document.getElementById('stats');
+  statsEl.innerHTML = '';
+
+  var allChip = makeChip(crimes.length, 'ALL', null, activeFilter === null);
+  allChip.onclick = function() { activeFilter = null; renderCrimes(allCrimes); };
+  statsEl.appendChild(allChip);
+
+  sorted.forEach(function(entry) {
+    var cat = entry[0], count = entry[1];
+    var label = catLabel(cat).replace('Crime', '').replace('Behaviour', 'Behav.').replace('Damage Arson', 'Damage').trim();
+    var chip = makeChip(count, label, catColor(cat), activeFilter === cat);
+    chip.onclick = function() { activeFilter = cat; renderCrimes(allCrimes.filter(function(c) { return c.category === cat; })); };
+    statsEl.appendChild(chip);
+  });
+
+  crimes.forEach(function(crime) {
+    if (!crime.location) return;
+    var lat = parseFloat(crime.location.latitude);
+    var lng = parseFloat(crime.location.longitude);
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    var color = catColor(crime.category);
+    var outcome = (crime.outcome_status && crime.outcome_status.category) || 'Under investigation';
+
+    L.circleMarker([lat, lng], {
+      radius: 8, fillColor: color, color: color, weight: 14, opacity: 0, fillOpacity: 0.7
+    })
+    .bindPopup(
+      '<div class="popup-cat">' + catLabel(crime.category) + '</div>' +
+      '<div class="popup-row">\uD83D\uDCCD ' + crime.location.street.name + '</div>' +
+      '<div class="popup-row">\uD83D\uDCC5 ' + crime.month + '</div>' +
+      '<div class="popup-row">\uD83D\uDD0E ' + outcome + '</div>',
+      { maxWidth: 220 }
+    )
+    .addTo(markers);
+  });
+
+  renderList(crimes);
+  if (panelCollapsed) togglePanel();
+}
+
+function makeChip(count, label, color, isActive) {
+  var chip = document.createElement('div');
+  chip.className = 'stat-item' + (isActive ? ' active' : '');
+  if (color) chip.style.borderTop = '2px solid ' + color;
+  chip.innerHTML =
+    '<span class="stat-num" style="' + (color ? 'color:' + color : '') + '">' + count + '</span>' +
+    '<span class="stat-label">' + label + '</span>';
+  return chip;
+}
+
+function renderList(crimes) {
+  var list = document.getElementById('crime-list');
+  list.innerHTML = '';
+
+  crimes.slice(0, 100).forEach(function(crime) {
+    var color = catColor(crime.category);
+    var outcome = (crime.outcome_status && crime.outcome_status.category) || 'No outcome';
+    var div = document.createElement('div');
+    div.className = 'crime-item';
+    var streetName = (crime.location && crime.location.street && crime.location.street.name) || 'Unknown';
+    div.innerHTML =
+      '<div class="crime-dot" style="background:' + color + '"></div>' +
+      '<div class="crime-info">' +
+        '<div class="crime-cat">' + catLabel(crime.category) + '</div>' +
+        '<div class="crime-meta">\uD83D\uDCCD ' + streetName + ' \u00B7 ' + crime.month + '</div>' +
+        '<div class="crime-outcome">' + outcome + '</div>' +
+      '</div>';
+    if (crime.location) {
+      div.onclick = function() {
+        map.setView([parseFloat(crime.location.latitude), parseFloat(crime.location.longitude)], 17);
+      };
     }
+    list.appendChild(div);
+  });
 
-    function dismissInstall() {
-      document.getElementById('installBanner').classList.remove('visible');
-      document.getElementById('iosInstallTip').classList.remove('visible');
-      localStorage.setItem('beachInstallDismissed', '1');
-    }
+  if (crimes.length > 100) {
+    var note = document.createElement('div');
+    note.style.cssText = 'text-align:center;padding:12px;font-family:var(--mono);font-size:0.7rem;color:var(--text-dim)';
+    note.textContent = '+ ' + (crimes.length - 100).toLocaleString() + ' more (all shown on map)';
+    list.appendChild(note);
+  }
+}
 
-    // Show iOS tip once
-    if (isIOS && !isInStandaloneMode && !localStorage.getItem('beachInstallDismissed')) {
-      setTimeout(() => {
-        document.getElementById('iosInstallTip').classList.add('visible');
-      }, 4000);
-    }
+function setStatus(html) {
+  document.getElementById('crime-list').innerHTML = '<div id="status">' + html + '</div>';
+}
 
-    // ─── Distance helper ────────────────────────────────────────
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
+function setBadge(text) {
+  // status badge removed — no-op
+}
 
-    // ─── Time helpers ────────────────────────────────────────────
-    function getTimeSinceUpdate() {
-      if (!lastUpdateTime) return '';
-      const diffMins = Math.floor((new Date() - lastUpdateTime) / 60000);
-      if (diffMins === 0) return 'Just now';
-      if (diffMins === 1) return '1 minute ago';
-      if (diffMins < 60) return `${diffMins} minutes ago`;
-      const h = Math.floor(diffMins / 60), m = diffMins % 60;
-      return h === 1 ? (m ? `1 hr ${m} min ago` : '1 hour ago') : (m ? `${h} hrs ${m} min ago` : `${h} hours ago`);
-    }
+function togglePanel() {
+  panelCollapsed = !panelCollapsed;
+  document.getElementById('panel').classList.toggle('collapsed', panelCollapsed);
+  document.getElementById('toggle-icon').textContent = panelCollapsed ? '\u25B2' : '\u25BC';
+}
 
-    function getMinutesSinceReading() {
-      return lastUpdateTime ? (new Date() - lastUpdateTime) / 60000 : 0;
-    }
+var tooltipTimer = null;
 
-    function getPredictedHeight(last, rate) {
-      return Math.max(-8, Math.min(8, last + rate * getMinutesSinceReading()));
-    }
+function showNoDataModal(month) {
+  var d = new Date(month + '-01');
+  var label = d.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+  document.getElementById('tooltip-body').textContent =
+    'No crime records found for ' + label + '.';
+  document.getElementById('tooltip-sub').innerHTML =
+    'Home Office data typically lags 2\u20133 months. Try an earlier month \u2191';
 
-    function formatCountdown(targetDate) {
-      if (!targetDate) return '--:--';
-      const diff = targetDate - new Date();
-      if (diff <= 0) return 'Now';
-      const totalMins = Math.floor(diff / 60000);
-      const h = Math.floor(totalMins / 60);
-      const m = totalMins % 60;
-      return h > 0 ? `${h}h ${String(m).padStart(2,'0')}m` : `${m}m`;
-    }
+  // Highlight the month input
+  document.getElementById('monthInput').classList.add('highlight');
 
-    function formatTime(date) {
-      if (!date) return '--:--';
-      return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-    }
+  // Show tooltip
+  var tip = document.getElementById('no-data-tooltip');
+  tip.classList.add('visible');
 
-    // ─── Weather (Open-Meteo – free, no key) ────────────────────
-    async function getWeather(lat, lon) {
-      try {
-        const url = `${OWM_BASE}?latitude=${lat}&longitude=${lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m,weathercode&wind_speed_unit=mph&timezone=auto`;
-        const res = await fetch(url);
-        const data = await res.json();
-        return data.current || null;
-      } catch (e) {
-        console.warn('Weather fetch failed:', e);
-        return null;
-      }
-    }
+  // Auto-dismiss after 8 seconds
+  if (tooltipTimer) clearTimeout(tooltipTimer);
+  tooltipTimer = setTimeout(function() { closeTooltip(); }, 8000);
+}
 
-    function weatherCodeToEmoji(code) {
-      if (code == null) return '🌡️';
-      if (code === 0) return '☀️';
-      if (code <= 2) return '🌤️';
-      if (code <= 3) return '☁️';
-      if (code <= 48) return '🌫️';
-      if (code <= 57) return '🌧️';
-      if (code <= 67) return '🌧️';
-      if (code <= 77) return '🌨️';
-      if (code <= 82) return '🌦️';
-      if (code <= 86) return '🌨️';
-      if (code <= 99) return '⛈️';
-      return '🌡️';
-    }
+function closeTooltip() {
+  document.getElementById('no-data-tooltip').classList.remove('visible');
+  document.getElementById('monthInput').classList.remove('highlight');
+  if (tooltipTimer) { clearTimeout(tooltipTimer); tooltipTimer = null; }
+}
 
-    function windDirToArrow(degrees) {
-      const dirs = ['↑','↗','→','↘','↓','↙','←','↖'];
-      return dirs[Math.round(((degrees + 22.5) % 360) / 45) % 8];
-    }
+function closeModal() {
+  closeTooltip();
+}
 
-    function renderWeather(weather) {
-      if (!weather) return '';
-      const emoji = weatherCodeToEmoji(weather.weathercode);
-      const temp = weather.temperature_2m != null ? `${Math.round(weather.temperature_2m)}°C` : '--';
-      const wind = weather.wind_speed_10m != null ? `${Math.round(weather.wind_speed_10m)} mph` : '--';
-      const windArrow = weather.wind_direction_10m != null ? windDirToArrow(weather.wind_direction_10m) : '';
-      return `
-        <div class="weather-strip">
-          <div class="weather-item">
-            <div class="weather-icon">${emoji}</div>
-            <div class="weather-label">Weather</div>
-            <div class="weather-value">${temp}</div>
-          </div>
-          <div class="weather-divider"></div>
-          <div class="weather-item">
-            <div class="weather-icon">💨</div>
-            <div class="weather-label">Wind</div>
-            <div class="weather-value">${windArrow} ${wind}</div>
-          </div>
-        </div>
-      `;
-    }
-
-
-
-
-    // ─── Update time display ─────────────────────────────────────
-    function updateTimeSinceDisplay() {
-      const el = document.getElementById('time-since-update');
-      if (el) el.textContent = getTimeSinceUpdate();
-
-      const waveEl = document.querySelector('.wave');
-      if (waveEl && tideRatePerMinute !== 0) {
-        const ph = getPredictedHeight(lastMeasuredValue, tideRatePerMinute);
-        const pct = Math.max(0, Math.min(100, ((ph + 8) / 16) * 100));
-        waveEl.style.height = `${pct}%`;
-      }
-    }
-
-    function startTimeSinceInterval() {
-      if (timeSinceUpdateInterval) clearInterval(timeSinceUpdateInterval);
-      timeSinceUpdateInterval = setInterval(updateTimeSinceDisplay, 60000);
-    }
-
-    // ─── Tide station helpers ────────────────────────────────────
-    async function findNearestTideStation(lat, lon) {
-      const res = await fetch(`${EA_API_BASE}/id/stations?parameter=level&type=TideGauge&_limit=500`);
-      const data = await res.json();
-      if (!data.items?.length) throw new Error('No tide stations found');
-      let nearest = null, minDist = Infinity;
-      data.items.forEach(s => {
-        if (s.lat && s.long) {
-          const d = calculateDistance(lat, lon, s.lat, s.long);
-          if (d < minDist) { minDist = d; nearest = s; }
-        }
-      });
-      return nearest;
-    }
-
-    async function getTideReading(id) {
-      const res = await fetch(`${EA_API_BASE}/id/stations/${id}/readings?_sorted&_limit=1`);
-      const data = await res.json();
-      if (!data.items?.length) throw new Error('No readings available');
-      return data.items[0];
-    }
-
-    async function getTideTrend(id) {
-      try {
-        const res = await fetch(`${EA_API_BASE}/id/stations/${id}/readings?_sorted&_limit=10`);
-        const data = await res.json();
-        if (!data.items || data.items.length < 2) return { direction: 'stable', ratePerMinute: 0 };
-        let totalChange = 0, totalMins = 0;
-        for (let i = 0; i < Math.min(5, data.items.length - 1); i++) {
-          totalChange += data.items[i].value - data.items[i+1].value;
-          totalMins   += (new Date(data.items[i].dateTime) - new Date(data.items[i+1].dateTime)) / 60000;
-        }
-        const rate = totalMins > 0 ? totalChange / totalMins : 0;
-        return {
-          direction: rate > 0.001 ? 'rising' : rate < -0.001 ? 'falling' : 'stable',
-          ratePerMinute: rate
-        };
-      } catch { return { direction: 'unknown', ratePerMinute: 0 }; }
-    }
-
-    // ─── Display ─────────────────────────────────────────────────
-    function displayTideData(reading, station, trendData, weather) {
-      lastMeasuredValue = reading.value;
-      tideRatePerMinute = trendData.ratePerMinute;
-
-      const tideDir = trendData.direction === 'rising' ? 'IN' : trendData.direction === 'falling' ? 'OUT' : 'STABLE';
-      const arrowDir = trendData.direction === 'rising' ? 'up' : 'down';
-
-      const displayHeight = getMinutesSinceReading() > 5 ? getPredictedHeight(reading.value, trendData.ratePerMinute) : reading.value;
-
-      const pct = Math.max(0, Math.min(100, ((displayHeight + 8) / 16) * 100));
-
-      const content = document.getElementById('content');
-      content.innerHTML = `
-        <div class="tide-data">
-          <div class="height-value">${displayHeight.toFixed(1)}<span class="height-unit"> m</span></div>
-          <div class="tide-status">TIDE GOING ${tideDir}</div>
-
-          <div class="tide-chart">
-            <svg class="wave" viewBox="0 0 100 100" preserveAspectRatio="none" style="height:${pct}%;">
-              <defs>
-                <linearGradient id="wg" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%"   style="stop-color:#4ECDC4;stop-opacity:0.9"/>
-                  <stop offset="50%"  style="stop-color:#45B8C4;stop-opacity:0.92"/>
-                  <stop offset="100%" style="stop-color:#44A7B8;stop-opacity:0.95"/>
-                </linearGradient>
-              </defs>
-              <rect width="100" height="100" fill="url(#wg)"/>
-              <path d="M 0,5 Q 25,0 50,5 T 100,5 L 100,0 L 0,0 Z" fill="rgba(255,255,255,0.5)">
-                <animate attributeName="d" dur="2.5s" repeatCount="indefinite"
-                  values="M 0,5 Q 25,0 50,5 T 100,5 L 100,0 L 0,0 Z;M 0,5 Q 25,10 50,5 T 100,5 L 100,0 L 0,0 Z;M 0,5 Q 25,0 50,5 T 100,5 L 100,0 L 0,0 Z"/>
-              </path>
-              <path d="M 0,3 Q 20,0 40,3 T 80,3 L 100,3 L 100,0 L 0,0 Z" fill="rgba(255,255,255,0.35)">
-                <animate attributeName="d" dur="3.5s" repeatCount="indefinite"
-                  values="M 0,3 Q 20,0 40,3 T 80,3 L 100,3 L 100,0 L 0,0 Z;M 0,3 Q 20,7 40,3 T 80,3 L 100,3 L 100,0 L 0,0 Z;M 0,3 Q 20,0 40,3 T 80,3 L 100,3 L 100,0 L 0,0 Z"/>
-              </path>
-            </svg>
-            <div class="arrow-in-water ${arrowDir}">↓</div>
-          </div>
-
-          ${renderWeather(weather)}
-          <div class="station-info">
-            <div class="station-name">Nearest Tidal Gauge:<br>📍 ${station.label}</div>
-            <div class="last-updated">Last reading: ${reading.value.toFixed(2)}m at ${new Date(reading.dateTime).toLocaleString('en-GB',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})}</div>
-            <div class="time-since-update" id="time-since-update">${getTimeSinceUpdate()}</div>
-          </div>
-        </div>
-      `;
-
-      startTimeSinceInterval();      updateTimeSinceDisplay();
-    }
-
-    function displayError(msg) {
-      document.getElementById('content').innerHTML = `<div class="error"><p>${msg}</p></div>`;
-    }
-
-    // ─── Main ────────────────────────────────────────────────────
-    async function locateTide(forceRefresh = false) {
-      const content = document.getElementById('content');
-
-      try {
-        let lat, lon, station;
-
-        if (!forceRefresh) {
-          const saved = localStorage.getItem('tideAppData');
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            lat = parsed.latitude; lon = parsed.longitude; station = parsed.station;
-            currentStation = station;
-            content.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Getting tide data from ${station.label}...</p></div>`;
-
-            const [reading, trend, weather] = await Promise.all([
-              getTideReading(station.notation),
-              getTideTrend(station.notation),
-              getWeather(lat, lon),
-            ]);
-            lastUpdateTime = new Date(reading.dateTime);
-            displayTideData(reading, station, trend, weather);
-            return;
-          }
-        }
-
-        content.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Finding your nearest tide station...</p></div>`;
-
-        const pos = await new Promise((res, rej) => {
-          if (!navigator.geolocation) rej(new Error('Geolocation not supported'));
-          navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 });
-        });
-        lat = pos.coords.latitude; lon = pos.coords.longitude;
-
-        content.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Locating nearest tide gauge...</p></div>`;
-        station = await findNearestTideStation(lat, lon);
-        if (!station) throw new Error('No tide station found nearby');
-
-        localStorage.setItem('tideAppData', JSON.stringify({ latitude: lat, longitude: lon, station }));
-        currentStation = station;
-
-        content.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Loading all data...</p></div>`;
-
-        const [reading, trend, weather] = await Promise.all([
-          getTideReading(station.notation),
-          getTideTrend(station.notation),
-          getWeather(lat, lon),
-        ]);
-        lastUpdateTime = new Date(reading.dateTime);
-        displayTideData(reading, station, trend, weather);
-
-      } catch (error) {
-        console.error('Error:', error);
-        if (error.code === 1) displayError('Location access denied. Please enable location services.');
-        else if (error.message?.includes('Geolocation')) displayError("Your browser doesn't support geolocation.");
-        else displayError('Unable to get tide data. Please try again.');
-      }
-    }
-
-    function refreshTide() { locateTide(true); }
-
-    // ─── Boot ────────────────────────────────────────────────────
-    initDarkMode();
-    window.addEventListener('load', locateTide);
-  </script>
+// Close tooltip when clicking outside it
+document.addEventListener('click', function(e) {
+  var tip = document.getElementById('no-data-tooltip');
+  var wrapper = document.getElementById('month-wrapper');
+  if (tip.classList.contains('visible') && !wrapper.contains(e.target)) {
+    closeTooltip();
+  }
+});
+</script>
 </body>
 </html>
