@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Beach or Nah</title>
 
-  <!-- 🏖️ Beach emoji favicon via SVG -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏖️</text></svg>">
 
-  <!-- PWA manifest injected as Blob URL by JS below -->
   <meta name="theme-color" content="#87CEEB" id="theme-color-meta">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -105,7 +103,9 @@
     .emoji-icon { font-size: 42px; }
     h1 { font-family: 'Fredoka', sans-serif; font-size: 32px; font-weight: 700; color: white; }
     .content { background: var(--content-bg); border-radius: 24px; padding: 28px 20px; }
-    .loading, .error { text-align: center; padding: 40px 20px; }
+    .loading, .error { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+    h2 { font-family: 'Fredoka', sans-serif; font-size: 48px; color: var(--text-primary); text-align: center; }
+    p { color: var(--text-secondary); text-align: center; margin-top: 8px; font-size: 14px; }
   </style>
 </head>
 
@@ -125,76 +125,82 @@
   </div>
 
 <script>
-const OWM_BASE = 'https://api.open-meteo.com/v1/forecast';
+  const EA_BASE = 'https://environment.data.gov.uk/flood-monitoring';
 
-let lastUpdateTime = null;
-let tideRatePerMinute = 0;
-let lastMeasuredValue = 0;
-
-/* ✅ PROXY FETCH */
-async function eaFetch(path) {
-  const base = "https://environment.data.gov.uk/flood-monitoring";
-  const target = base + path;
-  const res = await fetch(`/api?url=${encodeURIComponent(target)}`);
-  if (!res.ok) throw new Error("EA proxy request failed");
-  return res.json();
-}
-
-/* UPDATED FUNCTIONS */
-async function findNearestTideStation(lat, lon) {
-  const data = await eaFetch("/id/stations?parameter=level&type=TideGauge&_limit=500");
-  if (!data.items?.length) throw new Error('No tide stations found');
-  let nearest = null, minDist = Infinity;
-  data.items.forEach(s => {
-    if (s.lat && s.long) {
-      const d = Math.hypot(lat - s.lat, lon - s.long);
-      if (d < minDist) { minDist = d; nearest = s; }
-    }
-  });
-  return nearest;
-}
-
-async function getTideReading(id) {
-  const data = await eaFetch(`/id/stations/${id}/readings?_sorted&_limit=1`);
-  if (!data.items?.length) throw new Error('No readings available');
-  return data.items[0];
-}
-
-async function getTideTrend(id) {
-  try {
-    const data = await eaFetch(`/id/stations/${id}/readings?_sorted&_limit=10`);
-    if (!data.items || data.items.length < 2)
-      return { direction: 'stable', ratePerMinute: 0 };
-
-    let totalChange = 0, totalMins = 0;
-    for (let i = 0; i < Math.min(5, data.items.length - 1); i++) {
-      totalChange += data.items[i].value - data.items[i+1].value;
-      totalMins += (new Date(data.items[i].dateTime) - new Date(data.items[i+1].dateTime)) / 60000;
-    }
-
-    const rate = totalMins > 0 ? totalChange / totalMins : 0;
-    return {
-      direction: rate > 0.001 ? 'rising' : rate < -0.001 ? 'falling' : 'stable',
-      ratePerMinute: rate
-    };
-  } catch {
-    return { direction: 'unknown', ratePerMinute: 0 };
+  async function eaFetch(path) {
+    const target = EA_BASE + path;
+    const res = await fetch(`/api?url=${encodeURIComponent(target)}`);
+    if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
+    return res.json();
   }
-}
 
-window.addEventListener('load', async () => {
-  try {
-    navigator.geolocation.getCurrentPosition(async pos => {
-      const station = await findNearestTideStation(pos.coords.latitude, pos.coords.longitude);
-      const reading = await getTideReading(station.notation);
-      document.getElementById('content').innerHTML =
-        `<h2>${reading.value.toFixed(2)} m</h2><p>${station.label}</p>`;
+  async function findNearestTideStation(lat, lon) {
+    const data = await eaFetch('/id/stations?parameter=level&type=TideGauge&_limit=500');
+    if (!data.items?.length) throw new Error('No tide stations found');
+    let nearest = null, minDist = Infinity;
+    data.items.forEach(s => {
+      if (s.lat && s.long) {
+        const d = Math.hypot(lat - s.lat, lon - s.long);
+        if (d < minDist) { minDist = d; nearest = s; }
+      }
     });
-  } catch {
-    document.getElementById('content').innerHTML =
-      `<div class="error">Unable to load tide data.</div>`;
+    return nearest;
   }
-});
+
+  async function getTideReading(id) {
+    const data = await eaFetch(`/id/stations/${id}/readings?_sorted&_limit=1`);
+    if (!data.items?.length) throw new Error('No readings available');
+    return data.items[0];
+  }
+
+  async function getTideTrend(id) {
+    try {
+      const data = await eaFetch(`/id/stations/${id}/readings?_sorted&_limit=10`);
+      if (!data.items || data.items.length < 2)
+        return { direction: 'stable', ratePerMinute: 0 };
+
+      let totalChange = 0, totalMins = 0;
+      for (let i = 0; i < Math.min(5, data.items.length - 1); i++) {
+        totalChange += data.items[i].value - data.items[i + 1].value;
+        totalMins += (new Date(data.items[i].dateTime) - new Date(data.items[i + 1].dateTime)) / 60000;
+      }
+
+      const rate = totalMins > 0 ? totalChange / totalMins : 0;
+      return {
+        direction: rate > 0.001 ? 'rising' : rate < -0.001 ? 'falling' : 'stable',
+        ratePerMinute: rate
+      };
+    } catch {
+      return { direction: 'unknown', ratePerMinute: 0 };
+    }
+  }
+
+  window.addEventListener('load', () => {
+    navigator.geolocation.getCurrentPosition(
+      async pos => {
+        try {
+          const station = await findNearestTideStation(pos.coords.latitude, pos.coords.longitude);
+          const reading  = await getTideReading(station.notation);
+          const trend    = await getTideTrend(station.notation);
+
+          const arrow = trend.direction === 'rising' ? '↑' : trend.direction === 'falling' ? '↓' : '→';
+
+          document.getElementById('content').innerHTML = `
+            <h2>${reading.value.toFixed(2)} m ${arrow}</h2>
+            <p>${station.label}</p>
+            <p style="margin-top:4px;font-size:12px;color:var(--text-muted)">Tide is ${trend.direction}</p>
+          `;
+        } catch (err) {
+          document.getElementById('content').innerHTML =
+            `<div class="error">Unable to load tide data.<br><small>${err.message}</small></div>`;
+        }
+      },
+      err => {
+        document.getElementById('content').innerHTML =
+          `<div class="error">Location access denied.<br><small>${err.message}</small></div>`;
+      }
+    );
+  });
 </script>
 
 </body>
