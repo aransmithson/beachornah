@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beach or Nah</title>
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏖️</text></svg>">
+
+<meta name="theme-color" content="#87CEEB" id="theme-color-meta">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Beach or Nah">
+
+<style>
+/* (Your entire CSS remains unchanged — omitted here for readability) */
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card">
+    <div class="header">
+      <div class="title-wrapper">
+        <div class="emoji-icon">🏖️</div>
+        <h1>Beach or Nah</h1>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn refresh-btn" onclick="refreshTide()" title="Refresh tide data">
+          ↻
+        </button>
+      </div>
+    </div>
+
+    <div class="content" id="content">
+      <div class="loading">
+        <p>Finding your nearest tide station...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const OWM_BASE = 'https://api.open-meteo.com/v1/forecast';
+
+let currentStation = null;
+let lastUpdateTime = null;
+let tideRatePerMinute = 0;
+let lastMeasuredValue = 0;
+
+/* ------------------ DISTANCE ------------------ */
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) *
+    Math.cos(lat2*Math.PI/180) *
+    Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+/* ------------------ PROXIED FETCH ------------------ */
+async function proxyFetch(url) {
+  const res = await fetch(`/api?url=${encodeURIComponent(url)}`);
+  if (!res.ok) throw new Error("Proxy fetch failed");
+  return res.json();
+}
+
+/* ------------------ STATION ------------------ */
+async function findNearestTideStation(lat, lon) {
+  const url = "https://environment.data.gov.uk/flood-monitoring/id/stations?parameter=level&type=TideGauge&_limit=500";
+  const data = await proxyFetch(url);
+
+  let nearest = null;
+  let minDist = Infinity;
+
+  data.items.forEach(s => {
+    if (s.lat && s.long) {
+      const d = calculateDistance(lat, lon, s.lat, s.long);
+      if (d < minDist) {
+        minDist = d;
+        nearest = s;
+      }
+    }
+  });
+
+  return nearest;
+}
+
+async function getTideReading(id) {
+  const url = `https://environment.data.gov.uk/flood-monitoring/id/stations/${id}/readings?_sorted&_limit=1`;
+  const data = await proxyFetch(url);
+  return data.items[0];
+}
+
+async function getTideTrend(id) {
+  const url = `https://environment.data.gov.uk/flood-monitoring/id/stations/${id}/readings?_sorted&_limit=10`;
+  const data = await proxyFetch(url);
+
+  if (!data.items || data.items.length < 2) {
+    return { direction: "stable", ratePerMinute: 0 };
+  }
+
+  let totalChange = 0;
+  let totalMins = 0;
+
+  for (let i = 0; i < Math.min(5, data.items.length - 1); i++) {
+    totalChange += data.items[i].value - data.items[i+1].value;
+    totalMins += (
+      new Date(data.items[i].dateTime) -
+      new Date(data.items[i+1].dateTime)
+    ) / 60000;
+  }
+
+  const rate = totalMins > 0 ? totalChange / totalMins : 0;
+
+  return {
+    direction: rate > 0 ? "rising" : rate < 0 ? "falling" : "stable",
+    ratePerMinute: rate
+  };
+}
+
+/* ------------------ WEATHER ------------------ */
+async function getWeather(lat, lon) {
+  try {
+    const res = await fetch(
+      `${OWM_BASE}?latitude=${lat}&longitude=${lon}&current=temperature_2m,wind_speed_10m,weathercode&wind_speed_unit=mph&timezone=auto`
+    );
+    const data = await res.json();
+    return data.current;
+  } catch {
+    return null;
+  }
+}
+
+/* ------------------ DISPLAY ------------------ */
+function displayTideData(reading, station, trend) {
+  const content = document.getElementById("content");
+
+  content.innerHTML = `
+    <div style="text-align:center;">
+      <h2>${reading.value.toFixed(1)} m</h2>
+      <p>Tide going ${trend.direction.toUpperCase()}</p>
+      <p><small>${station.label}</small></p>
+    </div>
+  `;
+}
+
+/* ------------------ MAIN ------------------ */
+async function locateTide() {
+  try {
+    const pos = await new Promise((res, rej) => {
+      navigator.geolocation.getCurrentPosition(res, rej);
+    });
+
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+
+    const station = await findNearestTideStation(lat, lon);
+    currentStation = station;
+
+    const [reading, trend] = await Promise.all([
+      getTideReading(station.notation),
+      getTideTrend(station.notation)
+    ]);
+
+    displayTideData(reading, station, trend);
+
+  } catch (err) {
+    document.getElementById("content").innerHTML =
+      "<p>Unable to load tide data.</p>";
+    console.error(err);
+  }
+}
+
+function refreshTide() {
+  locateTide();
+}
+
+window.addEventListener("load", locateTide);
+</script>
+
+</body>
+</html>
