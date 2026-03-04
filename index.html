@@ -606,12 +606,7 @@
     const wave1 = `M0,${ty} C80,${ty-amp} 160,${ty+amp} 240,${ty-amp*0.8} C320,${ty+amp*0.6} 370,${ty-amp*0.5} ${W},${ty} L${W},${H} L0,${H} Z`;
     const wave2 = `M0,${ty} C80,${ty+amp} 160,${ty-amp} 240,${ty+amp*0.8} C320,${ty-amp*0.6} 370,${ty+amp*0.5} ${W},${ty} L${W},${H} L0,${H} Z`;
 
-    // Ripple lines in the sea zone
-    const seaH = H - tideY;
-    const ripples = seaH > 18 ? [0.3, 0.6].map(f => {
-      const y = (tideY + amp + 4) + f * (seaH - amp - 8);
-      return `<line x1="20" y1="${y.toFixed(1)}" x2="${W-20}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.18)" stroke-width="1.2" stroke-dasharray="12 9"/>`;
-    }).join('') : '';
+    const ripples = '';
 
     // Footprints in sand zone
     const sandH = tideY;
