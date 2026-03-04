@@ -18,14 +18,25 @@
       min-height: 100vh;
       display: flex; flex-direction: column;
       align-items: center; justify-content: flex-start;
-      background: linear-gradient(180deg, #2d8fb0 0%, #7ed4e8 40%, #b8eaf5 60%, #e8d88a 80%, #d4b84a 100%);
+      background: linear-gradient(180deg, #2d8fb0 0%, #7ed4e8 35%, #b8eaf5 45%, #e8d88a 52%, #d4b84a 100%);
       overflow-x: hidden;
       transition: background 1.5s ease;
     }
 
     /* ═══ SCENE ═══ */
-    .scene-wrap { width: 100%; max-width: 480px; position: relative; flex-shrink: 0; }
+    .scene-wrap { width: 100%; max-width: 480px; position: relative; flex-shrink: 0; z-index: 10; overflow: visible; }
     .scene-svg  { width: 100%; display: block; }
+
+    /* Sand continuation — pseudo-element extends beach colour behind the card without affecting layout */
+    .scene-wrap::after {
+      content: '';
+      position: absolute;
+      bottom: -2000px;
+      left: 0; right: 0;
+      height: 2000px;
+      background: linear-gradient(180deg, #f0d88a 0%, #d4a84b 100%);
+      z-index: -1;
+    }
 
     @keyframes spin-slow { to { transform: rotate(360deg); } }
     @keyframes sun-pulse { 0%,100%{r:22px} 50%{r:25px} }
@@ -583,9 +594,7 @@
     const margin = 12;
     const tideY = margin + (1 - norm) * (H - margin * 2);
 
-    const arrowColor = trend.direction === 'rising'  ? '#2a9d8f'
-                     : trend.direction === 'falling' ? '#e76f51'
-                     :                                 '#94a8b8';
+    const arrowColor = '#ffffff';
 
     const labelText = trend.direction === 'rising'  ? '▲ rising'
                     : trend.direction === 'falling' ? '▼ falling'
