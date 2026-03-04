@@ -18,7 +18,7 @@
       min-height: 100vh;
       display: flex; flex-direction: column;
       align-items: center; justify-content: flex-start;
-      background: linear-gradient(180deg, #2d8fb0 0%, #7ed4e8 50%, #b8eaf5 100%);
+      background: linear-gradient(180deg, #2d8fb0 0%, #7ed4e8 40%, #b8eaf5 60%, #e8d88a 80%, #d4b84a 100%);
       overflow-x: hidden;
       transition: background 1.5s ease;
     }
@@ -75,7 +75,7 @@
     .scene-svg rect.sea-rect { transition: fill 1.5s; }
 
     /* ═══ CARD ═══ */
-    .card-wrap { width: 90%; max-width: 440px; margin: -28px auto 40px; position: relative; z-index: 10; }
+    .card-wrap { width: 90%; max-width: 440px; margin: -28px auto 0; position: relative; z-index: 10; }
     .card {
       background: rgba(255,255,255,0.88);
       backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
@@ -83,6 +83,20 @@
       box-shadow: 0 8px 40px rgba(26,80,100,0.2);
       border: 1px solid rgba(255,255,255,0.4);
       overflow: hidden;
+    }
+
+    /* Station label below card */
+    .station-footer {
+      text-align: center;
+      padding: 10px 10px 20px;
+      font-size: 11px;
+      color: rgba(80,100,80,0.75);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+    .station-footer strong {
+      color: rgba(40,80,60,0.85);
+      font-weight: 700;
     }
 
     /* Title bar */
@@ -122,33 +136,14 @@
       animation: spin 0.8s linear infinite;
     }
 
-    .station-label {
-      font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
-      text-transform: uppercase; color: #5b8a9a; margin-bottom: 12px;
-    }
-
-    /* Tide hero row */
-    .tide-row { display: flex; align-items: stretch; gap: 14px; margin-bottom: 4px; }
-    .tide-numbers { flex: 1; }
-    .tide-hero { display: flex; align-items: flex-end; gap: 8px; }
-    .tide-value {
-      font-family: 'Fredoka', sans-serif; font-size: 60px; font-weight: 700;
-      line-height: 1; color: #1a3a4a; letter-spacing: -1px;
-    }
-    .tide-unit  { font-size: 18px; font-weight: 600; color: #5b8a9a; padding-bottom: 9px; }
-    .tide-arrow { font-size: 26px; padding-bottom: 7px; }
-    .tide-arrow.rising  { color: #2a9d8f; }
-    .tide-arrow.falling { color: #e76f51; }
-    .tide-arrow.stable  { color: #5b8a9a; }
-    .tide-trend-label { font-size: 12px; color: #5b8a9a; margin-top: 2px; }
-
-    /* ── Tide map ── */
+    /* Tide map — now full-width, centered */
     .tide-map-wrap {
-      width: 110px; flex-shrink: 0;
-      border-radius: 14px; overflow: hidden;
+      width: 100%;
+      border-radius: 18px; overflow: hidden;
       border: 1.5px solid rgba(74,184,212,0.3);
-      box-shadow: 0 2px 10px rgba(26,80,100,0.1);
+      box-shadow: 0 2px 14px rgba(26,80,100,0.12);
       position: relative;
+      margin-bottom: 4px;
     }
     .tide-map-svg { width: 100%; display: block; }
 
@@ -189,6 +184,15 @@
     .verdict.yes { background: linear-gradient(135deg,#2a9d8f22,#2a9d8f11); color: #1a6b60; border: 1px solid #2a9d8f33; }
     .verdict.no  { background: linear-gradient(135deg,#e76f5122,#e76f5111); color: #8b3a1e; border: 1px solid #e76f5133; }
     .verdict.meh { background: linear-gradient(135deg,#e9c46a22,#e9c46a11); color: #7a6000; border: 1px solid #e9c46a44; }
+
+    /* Rising tide caution banner */
+    .tide-caution {
+      margin-top: 8px; border-radius: 14px; padding: 9px 14px;
+      text-align: center; font-size: 12.5px; font-weight: 600;
+      background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+      color: #7a5800; border: 1px solid #f0c040;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
 
     /* ═══ MODAL ═══ */
     .modal-overlay {
@@ -271,9 +275,17 @@
         <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6"/>
         <stop offset="100%" stop-color="#a8e8f5" stop-opacity="0.4"/>
       </linearGradient>
+      <!-- Extend sand gradient downward for background fill -->
+      <linearGradient id="sand-bg-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#e8d88a"/>
+        <stop offset="100%" stop-color="#d4b84a"/>
+      </linearGradient>
     </defs>
 
     <rect id="sky-bg" class="sky-rect" width="480" height="260" fill="#2d8fb0"/>
+
+    <!-- Extended sand fill rect behind everything at the bottom -->
+    <rect x="0" y="220" width="480" height="40" fill="url(#sand-bg-grad)"/>
 
     <g id="sun-group" opacity="0">
       <circle cx="60" cy="58" r="46" fill="url(#sunglow)"/>
@@ -345,7 +357,8 @@
     <path class="wave1" fill="url(#wg1)" d="M0,22 C60,10 120,34 180,22 C240,10 300,34 360,22 C420,10 480,34 480,22 L480,60 L0,60 Z" transform="translate(0,150)"/>
     <path class="wave3" fill="url(#wg3)" d="M0,34 C70,22 140,46 210,34 C280,22 350,46 420,34 L480,34 L480,60 L0,60 Z" transform="translate(0,155)"/>
 
-    <ellipse cx="240" cy="270" rx="310" ry="64" fill="url(#sand-grad)"/>
+    <!-- Sand — large ellipse extending well beyond view so it fills card area behind too -->
+    <ellipse cx="240" cy="290" rx="400" ry="100" fill="url(#sand-grad)"/>
 
     <g id="umbrella-group">
       <line x1="82" y1="248" x2="88" y2="215" stroke="#b8860b" stroke-width="2.5" stroke-linecap="round"/>
@@ -383,6 +396,8 @@
       <div class="status"><div class="spinner"></div>Finding your nearest tide station…</div>
     </div>
   </div>
+  <!-- Station label sits outside/below the card -->
+  <div class="station-footer" id="station-footer"></div>
 </div>
 
 <!-- ═══ HELP MODAL ═══ -->
@@ -452,6 +467,7 @@
     setTimeout(() => btn.classList.remove('spinning'), 700);
     document.getElementById('card-body').innerHTML =
       '<div class="status"><div class="spinner"></div>Getting new location…</div>';
+    document.getElementById('station-footer').innerHTML = '';
     requestLocation();
   }
 
@@ -484,7 +500,6 @@
   }
 
   async function getTideReadings(id) {
-    // Get last 12 readings for trend + range estimation
     const data = await eaFetch(`/id/stations/${id}/readings?_sorted&_limit=12`);
     if (!data.items?.length) throw new Error('No readings available');
     return data.items;
@@ -539,128 +554,136 @@
     return ['N','NE','E','SE','S','SW','W','NW'][Math.round(deg / 45) % 8];
   }
 
-  function verdict(wx) {
+  function verdict(wx, tideDirection) {
     const bad  = wx.weathercode >= 51 || wx.windspeed_10m > 30;
     const cold = wx.temperature_2m < 12;
-    if (!bad && !cold) return { cls: 'yes', text: '🏄 Yeah, get to the beach!' };
-    if (bad)           return { cls: 'no',  text: '🌧️ Nah, stay home today' };
-    return                    { cls: 'meh', text: '🧥 Brave the cold? Maybe.' };
+    let main;
+    if (!bad && !cold) main = { cls: 'yes', text: '🏄 Yeah, get to the beach!' };
+    else if (bad)      main = { cls: 'no',  text: '🌧️ Nah, stay home today' };
+    else               main = { cls: 'meh', text: '🧥 Brave the cold? Maybe.' };
+    return { ...main, showTideCaution: tideDirection === 'rising' };
   }
 
-  // ── Tide map SVG (top-down beach view) ──────────────────
+  // ── Tide map SVG — now wider, tide height overlaid in centre ──
   function buildTideMap(readings, trend) {
-    const W = 110, H = 140;
+    const W = 400, H = 130;
 
-    // Estimate range from readings (pad a bit since we only have recent window)
     const values = readings.map(r => r.value);
     const minVal = Math.min(...values);
     const maxVal = Math.max(...values);
-    const range  = Math.max(maxVal - minVal, 0.5); // avoid div/0
+    const range  = Math.max(maxVal - minVal, 0.5);
     const current = values[0];
 
-    // normalise: 0 = all sand, 1 = all sea
-    // tide height relative to window → y position in map
-    // When tide is high, water covers more (tide line moves toward bottom = land side)
     const norm = Math.max(0, Math.min(1, (current - minVal) / range));
 
-    // Map area: top is sea (blue), bottom is sand (tan)
-    // tide line Y: when norm=1 (high), line is low (covering lots of sand)
-    //              when norm=0 (low),  line is high (exposing lots of sand)
-    const margin = 18;
+    const margin = 14;
     const tideY = margin + (1 - norm) * (H - margin * 2);
 
-    // Arrow: points toward sea (up) when falling, toward land (down) when rising
-    const arrowDir  = trend.direction === 'rising' ? 1 : trend.direction === 'falling' ? -1 : 0;
-    const arrowY    = tideY + arrowDir * 12;
-    const arrowHead = tideY + arrowDir * 20;
+    const arrowDir   = trend.direction === 'rising' ? 1 : trend.direction === 'falling' ? -1 : 0;
     const arrowColor = trend.direction === 'rising' ? '#2a9d8f' : trend.direction === 'falling' ? '#e76f51' : '#94a8b8';
 
     // Ripple lines on water
-    const ripples = [0.25, 0.5, 0.75].map(f => {
+    const rippleCount = 5;
+    const ripples = Array.from({length: rippleCount}, (_, i) => {
+      const f = (i + 1) / (rippleCount + 1);
       const y = margin + f * (tideY - margin);
-      return `<line x1="12" y1="${y}" x2="${W-12}" y2="${y}" stroke="rgba(255,255,255,0.18)" stroke-width="1" stroke-dasharray="6 5"/>`;
+      return `<line x1="16" y1="${y.toFixed(1)}" x2="${W-16}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="10 8"/>`;
     }).join('');
 
-    // Footprints on sand (simple dots)
+    // Footprints on sand if there's enough beach visible
     const prints = [];
-    if (tideY < H - 28) {
-      // Only show if there's enough sand
-      [[30,tideY+14],[55,tideY+22],[50,tideY+12],[75,tideY+18]].forEach(([x,y]) => {
+    const sandHeight = H - tideY;
+    if (sandHeight > 30) {
+      [[80, tideY+18],[110,tideY+28],[140,tideY+16],[200,tideY+26],[260,tideY+14],[300,tideY+30]].forEach(([x,y]) => {
         if (y < H - 6)
-          prints.push(`<ellipse cx="${x}" cy="${y}" rx="3" ry="2" fill="rgba(180,140,60,0.4)" transform="rotate(-20,${x},${y})"/>`);
+          prints.push(`<ellipse cx="${x}" cy="${y}" rx="4" ry="2.5" fill="rgba(180,140,60,0.4)" transform="rotate(-20,${x},${y})"/>`);
       });
     }
 
-    const arrowSVG = arrowDir !== 0 ? `
-      <g class="tide-dir-arrow">
-        <line x1="${W/2}" y1="${tideY}" x2="${W/2}" y2="${arrowY}"
-          stroke="${arrowColor}" stroke-width="2.5" stroke-linecap="round"/>
-        <polygon
-          points="${W/2},${arrowHead} ${W/2-5},${arrowY - arrowDir*2} ${W/2+5},${arrowY - arrowDir*2}"
-          fill="${arrowColor}"/>
-      </g>` : `
-      <line x1="${W/2-8}" y1="${tideY}" x2="${W/2+8}" y2="${tideY}"
-        stroke="${arrowColor}" stroke-width="2.5" stroke-linecap="round"/>`;
+    // Arrow group — sits on the tide line at centre
+    let arrowSVG = '';
+    if (arrowDir !== 0) {
+      const ax = W / 2 + 60; // offset from centre text
+      const ay1 = tideY;
+      const ay2 = tideY + arrowDir * 16;
+      const ayHead = tideY + arrowDir * 24;
+      arrowSVG = `
+        <g class="tide-dir-arrow">
+          <line x1="${ax}" y1="${ay1}" x2="${ax}" y2="${ay2}"
+            stroke="${arrowColor}" stroke-width="3" stroke-linecap="round"/>
+          <polygon
+            points="${ax},${ayHead} ${ax-6},${ay2 - arrowDir*2} ${ax+6},${ay2 - arrowDir*2}"
+            fill="${arrowColor}"/>
+        </g>`;
+    } else {
+      const ax = W / 2 + 60;
+      arrowSVG = `<line x1="${ax-10}" y1="${tideY}" x2="${ax+10}" y2="${tideY}"
+        stroke="${arrowColor}" stroke-width="3" stroke-linecap="round"/>`;
+    }
 
-    // Label
+    // Tide height value text — overlaid in centre of graphic
+    const heightText = current.toFixed(2);
     const labelText = trend.direction === 'rising' ? '▲ rising' : trend.direction === 'falling' ? '▼ falling' : '— slack';
-    const labelColor = trend.direction === 'rising' ? '#2a9d8f' : trend.direction === 'falling' ? '#e76f51' : '#94a8b8';
+
+    // Shadow rect behind text for legibility
+    const textY = tideY;
+    // Determine if text is in sea or sand zone for color contrast
+    const inSea = tideY > H * 0.45; // text anchor midpoint roughly
+    const numColor = 'white';
+    const numShadow = 'rgba(0,0,0,0.25)';
 
     return `
-    <svg class="tide-map-svg" viewBox="0 0 ${W} ${H+16}" xmlns="http://www.w3.org/2000/svg">
+    <svg class="tide-map-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
       <!-- Sea -->
       <rect x="0" y="0" width="${W}" height="${tideY}" fill="#2aafc8" rx="0"/>
       <!-- Sand -->
-      <rect x="0" y="${tideY}" width="${W}" height="${H-tideY}" fill="#f0d88a"/>
+      <rect x="0" y="${tideY}" width="${W}" height="${H - tideY}" fill="#f0d88a"/>
       <!-- Ripples -->
       ${ripples}
       <!-- Footprints -->
       ${prints.join('')}
-      <!-- Tide line -->
+      <!-- Tide line (wavy) -->
       <path class="tide-line-animated"
-        d="M0,${tideY} C${W*0.2},${tideY-4} ${W*0.4},${tideY+4} ${W*0.6},${tideY-3} C${W*0.8},${tideY+3} ${W},${tideY-1} ${W},${tideY}"
-        stroke="white" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.9"/>
-      <!-- Arrow -->
+        d="M0,${tideY} C${W*0.15},${tideY-5} ${W*0.3},${tideY+5} ${W*0.5},${tideY-4} C${W*0.7},${tideY+4} ${W*0.85},${tideY-3} ${W},${tideY}"
+        stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.9"/>
+      <!-- "SEA" label top left -->
+      <text x="12" y="13" text-anchor="start" font-size="9" font-family="DM Sans,sans-serif"
+        font-weight="700" fill="rgba(255,255,255,0.7)" letter-spacing="1.5">SEA</text>
+      <!-- "LAND" label bottom left -->
+      <text x="12" y="${H - 5}" text-anchor="start" font-size="9" font-family="DM Sans,sans-serif"
+        font-weight="700" fill="rgba(160,120,40,0.7)" letter-spacing="1.5">LAND</text>
+      <!-- Tide height — large text centred on tide line -->
+      <text x="${W/2 - 18}" y="${textY - 8}" text-anchor="middle" font-size="10"
+        font-family="DM Sans,sans-serif" font-weight="600"
+        fill="${numShadow}">current height</text>
+      <text x="${W/2 - 18}" y="${textY + 22}" text-anchor="middle"
+        font-size="34" font-family="Fredoka,sans-serif" font-weight="700"
+        fill="white" filter="url(#text-shadow)"
+        style="text-shadow: 0 2px 8px rgba(0,0,0,0.35)">${heightText} m</text>
+      <!-- Direction label to right of height -->
       ${arrowSVG}
-      <!-- "SEA" label top -->
-      <text x="${W/2}" y="11" text-anchor="middle" font-size="8" font-family="DM Sans,sans-serif"
-        font-weight="600" fill="rgba(255,255,255,0.7)" letter-spacing="1">SEA</text>
-      <!-- "LAND" label bottom -->
-      <text x="${W/2}" y="${H-3}" text-anchor="middle" font-size="8" font-family="DM Sans,sans-serif"
-        font-weight="600" fill="rgba(160,120,40,0.7)" letter-spacing="1">LAND</text>
-      <!-- Height % label -->
-      <text x="${W-5}" y="${tideY - 5}" text-anchor="end" font-size="8.5"
-        font-family="DM Sans,sans-serif" font-weight="700" fill="white" opacity="0.85"
-      >${Math.round(norm * 100)}%</text>
-      <!-- Direction label -->
-      <text x="${W/2}" y="${H+12}" text-anchor="middle" font-size="9"
+      <text x="${W/2 + 58}" y="${tideY + 35}" text-anchor="middle" font-size="10"
         font-family="DM Sans,sans-serif" font-weight="700"
-        fill="${labelColor}">${labelText}</text>
+        fill="${arrowColor}">${labelText}</text>
     </svg>`;
   }
 
   // ── Render ──────────────────────────────────────────────
   function render(station, readings, trend, wx) {
-    const current = readings[0];
-    const arrows  = { rising:'↑', falling:'↓', stable:'→', unknown:'–' };
-    const classes  = { rising:'rising', falling:'falling', stable:'stable', unknown:'stable' };
     const w = weatherMeta(wx.weathercode);
-    const v = verdict(wx);
+    const v = verdict(wx, trend.direction);
     const tideMap = buildTideMap(readings, trend);
 
+    // Station footer
+    document.getElementById('station-footer').innerHTML =
+      `Nearest measuring station: <strong>${station.label || station.notation || 'Unknown'}</strong>`;
+
+    const cautionHTML = v.showTideCaution
+      ? `<div class="tide-caution">⚠️ Tide is rising — watch your footing near the water's edge</div>`
+      : '';
+
     document.getElementById('card-body').innerHTML = `
-      <div class="station-label">📍 ${station.label || 'Tide Station'}</div>
-      <div class="tide-row">
-        <div class="tide-numbers">
-          <div class="tide-hero">
-            <span class="tide-value">${current.value.toFixed(2)}</span>
-            <span class="tide-unit">m</span>
-            <span class="tide-arrow ${classes[trend.direction]}">${arrows[trend.direction]}</span>
-          </div>
-          <div class="tide-trend-label">Tide is <strong>${trend.direction}</strong></div>
-        </div>
-        <div class="tide-map-wrap">${tideMap}</div>
-      </div>
+      <div class="tide-map-wrap">${tideMap}</div>
       <div class="divider"></div>
       <div class="weather-row">
         <div class="weather-chip">
@@ -680,6 +703,7 @@
         </div>
       </div>
       <div class="verdict ${v.cls}">${v.text}</div>
+      ${cautionHTML}
     `;
   }
 
@@ -710,7 +734,6 @@
     const bodyEl    = document.body;
     const waves = document.querySelectorAll('.wave1,.wave2,.wave3');
 
-    // Reset
     [sun,moon,cloudA,cloudB,cloudC,cloudD,cloudE,cloudF,fog,rain,snow,light].forEach(el => {
       if (el) el.style.opacity = '0';
     });
@@ -719,7 +742,7 @@
     const rough = windSpeed > 20 || ['rain','showers','thunderstorm'].includes(condition);
     waves.forEach(w => {
       const n = w.classList[0];
-      if (n === 'wave1') w.style.animation = rough ? 'wave1-rough 3s ease-in-out infinite'     : 'wave1-calm 6s ease-in-out infinite';
+      if (n === 'wave1') w.style.animation = rough ? 'wave1-rough 3s ease-in-out infinite'        : 'wave1-calm 6s ease-in-out infinite';
       if (n === 'wave2') w.style.animation = rough ? 'wave2-rough 2.5s ease-in-out infinite 0.4s' : 'wave2-calm 8s ease-in-out infinite 1s';
       if (n === 'wave3') w.style.animation = rough ? 'wave3-rough 2s ease-in-out infinite 0.8s'   : 'wave3-calm 5s ease-in-out infinite 0.5s';
     });
@@ -727,35 +750,35 @@
     switch (condition) {
       case 'clear-day':
         sky.style.fill = '#1e8ab0'; seaBg.style.fill = '#1a8fa8';
-        bodyEl.style.background = 'linear-gradient(180deg,#1e8ab0 0%,#7ed4e8 50%,#c8e8f0 100%)';
+        bodyEl.style.background = 'linear-gradient(180deg,#1e8ab0 0%,#7ed4e8 40%,#c8e8f0 60%,#e8d88a 80%,#d4b84a 100%)';
         titleBar.style.background = 'linear-gradient(135deg,#1a8fa8,#2aafc8)';
         sun.style.opacity = '1'; cloudA.style.opacity = '0.15'; cloudB.style.opacity = '0.1';
         gulls.forEach(g => g.style.opacity = '1'); umbrella.style.opacity = '1'; break;
 
       case 'clear-night':
         sky.style.fill = '#0a1628'; seaBg.style.fill = '#0a2a3a';
-        bodyEl.style.background = 'linear-gradient(180deg,#0a1628 0%,#0d2035 50%,#1a2e1a 100%)';
+        bodyEl.style.background = 'linear-gradient(180deg,#0a1628 0%,#0d2035 40%,#1a2e1a 60%,#c8b86a 80%,#b8a050 100%)';
         titleBar.style.background = 'linear-gradient(135deg,#0d3050,#1a5070)';
         moon.style.opacity = '1'; cloudA.style.opacity = '0.12';
         gulls.forEach(g => g.style.opacity = '0.3'); umbrella.style.opacity = '0.5'; break;
 
       case 'partly-cloudy':
         sky.style.fill = '#3a9fbf'; seaBg.style.fill = '#1a8fa8';
-        bodyEl.style.background = 'linear-gradient(180deg,#3a9fbf 0%,#8adce8 50%,#c8ecf4 100%)';
+        bodyEl.style.background = 'linear-gradient(180deg,#3a9fbf 0%,#8adce8 40%,#c8ecf4 60%,#e8d88a 80%,#d4b84a 100%)';
         titleBar.style.background = 'linear-gradient(135deg,#1a8fa8,#2aafc8)';
         sun.style.opacity = '0.75'; cloudA.style.opacity = '0.95'; cloudB.style.opacity = '0.9';
         gulls.forEach(g => g.style.opacity = '1'); umbrella.style.opacity = '1'; break;
 
       case 'partly-cloudy-night':
         sky.style.fill = '#0a1628'; seaBg.style.fill = '#0a2a3a';
-        bodyEl.style.background = 'linear-gradient(180deg,#0a1628 0%,#0d2035 50%,#1a2e20 100%)';
+        bodyEl.style.background = 'linear-gradient(180deg,#0a1628 0%,#0d2035 40%,#1a2e20 60%,#c8b870 80%,#b8a050 100%)';
         titleBar.style.background = 'linear-gradient(135deg,#0d3050,#1a5070)';
         moon.style.opacity = '0.8'; cloudA.style.opacity = '0.5'; cloudB.style.opacity = '0.4';
         gulls.forEach(g => g.style.opacity = '0.2'); umbrella.style.opacity = '0.4'; break;
 
       case 'overcast':
         sky.style.fill = '#607a8a'; seaBg.style.fill = '#3a6070';
-        bodyEl.style.background = 'linear-gradient(180deg,#607a8a 0%,#8aabb8 50%,#b0c8d0 100%)';
+        bodyEl.style.background = 'linear-gradient(180deg,#607a8a 0%,#8aabb8 40%,#b0c8d0 60%,#d8c870 80%,#c8b050 100%)';
         titleBar.style.background = 'linear-gradient(135deg,#4a6070,#607888)';
         [cloudA,cloudB,cloudC,cloudD,cloudE,cloudF].forEach(c => c.style.opacity = '1');
         cloudC.querySelectorAll('ellipse').forEach(e => e.setAttribute('fill','#b0bec5'));
@@ -763,14 +786,14 @@
 
       case 'fog':
         sky.style.fill = '#8a9ea8'; seaBg.style.fill = '#506070';
-        bodyEl.style.background = 'linear-gradient(180deg,#8a9ea8 0%,#a8bcc4 50%,#c4d4d8 100%)';
+        bodyEl.style.background = 'linear-gradient(180deg,#8a9ea8 0%,#a8bcc4 40%,#c4d4d8 60%,#d8c870 80%,#c8b050 100%)';
         titleBar.style.background = 'linear-gradient(135deg,#5a7080,#708090)';
         fog.style.opacity = '1'; cloudA.style.opacity = '0.5'; cloudB.style.opacity = '0.4';
         gulls.forEach(g => g.style.opacity = '0.3'); umbrella.style.opacity = '0.5'; break;
 
       case 'drizzle':
         sky.style.fill = '#506878'; seaBg.style.fill = '#2a5060';
-        bodyEl.style.background = 'linear-gradient(180deg,#506878 0%,#6a8898 50%,#a0b8c0 100%)';
+        bodyEl.style.background = 'linear-gradient(180deg,#506878 0%,#6a8898 40%,#a0b8c0 60%,#c8b860 80%,#b8a040 100%)';
         titleBar.style.background = 'linear-gradient(135deg,#3a5060,#4a6878)';
         cloudA.style.opacity = '1'; cloudB.style.opacity = '0.9'; cloudC.style.opacity = '0.7';
         rain.style.opacity = '1'; spawnRain(rain, 40, 3.5);
@@ -778,7 +801,7 @@
 
       case 'rain': case 'showers':
         sky.style.fill = '#3a4e58'; seaBg.style.fill = '#1a3a48';
-        bodyEl.style.background = 'linear-gradient(180deg,#3a4e58 0%,#4a6070 50%,#6a8890 100%)';
+        bodyEl.style.background = 'linear-gradient(180deg,#3a4e58 0%,#4a6070 40%,#6a8890 60%,#c0a848 80%,#b09030 100%)';
         titleBar.style.background = 'linear-gradient(135deg,#2a3e48,#3a5060)';
         [cloudA,cloudB,cloudC].forEach(c => c.style.opacity = '1');
         cloudD.style.opacity = '0.9'; cloudE.style.opacity = '0.9'; cloudF.style.opacity = '0.85';
@@ -787,7 +810,7 @@
 
       case 'snow':
         sky.style.fill = '#7888a0'; seaBg.style.fill = '#4a6070';
-        bodyEl.style.background = 'linear-gradient(180deg,#7888a0 0%,#a0b0c0 50%,#d0dce4 100%)';
+        bodyEl.style.background = 'linear-gradient(180deg,#7888a0 0%,#a0b0c0 40%,#d0dce4 60%,#e0d8a0 80%,#d0c070 100%)';
         titleBar.style.background = 'linear-gradient(135deg,#5a6878,#7080a0)';
         cloudA.style.opacity = '1'; cloudB.style.opacity = '1'; cloudC.style.opacity = '0.8';
         snow.style.opacity = '1'; spawnSnow(snow, 50);
@@ -795,7 +818,7 @@
 
       case 'thunderstorm':
         sky.style.fill = '#1e2a30'; seaBg.style.fill = '#0a1e28';
-        bodyEl.style.background = 'linear-gradient(180deg,#1e2a30 0%,#2a3840 50%,#3a5058 100%)';
+        bodyEl.style.background = 'linear-gradient(180deg,#1e2a30 0%,#2a3840 40%,#3a5058 60%,#b09030 80%,#988020 100%)';
         titleBar.style.background = 'linear-gradient(135deg,#1a2428,#2a3440)';
         [cloudA,cloudB,cloudC,cloudD,cloudE,cloudF].forEach(c => c.style.opacity = '1');
         rain.style.opacity = '1'; light.style.opacity = '1'; spawnRain(rain, 100, 1.5);
