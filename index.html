@@ -564,9 +564,9 @@
     return { ...main, showTideCaution: tideDirection === 'rising' };
   }
 
-  // ── Tide map SVG — now wider, tide height overlaid in centre ──
+  // ── Tide map SVG — sand top, sea bottom, animated wave, centred text ──
   function buildTideMap(readings, trend) {
-    const W = 400, H = 130;
+    const W = 400, H = 140;
 
     const values = readings.map(r => r.value);
     const minVal = Math.min(...values);
@@ -574,97 +574,122 @@
     const range  = Math.max(maxVal - minVal, 0.5);
     const current = values[0];
 
+    // norm=1 → high tide (lots of sea at bottom), norm=0 → low tide (little sea)
     const norm = Math.max(0, Math.min(1, (current - minVal) / range));
 
-    const margin = 14;
+    // tideY = where sand ends and sea begins (from top)
+    // high tide → tideY small (line near top, sand strip thin)
+    // low tide  → tideY large (line near bottom, lots of sand)
+    const margin = 12;
     const tideY = margin + (1 - norm) * (H - margin * 2);
 
-    const arrowDir   = trend.direction === 'rising' ? 1 : trend.direction === 'falling' ? -1 : 0;
-    const arrowColor = trend.direction === 'rising' ? '#2a9d8f' : trend.direction === 'falling' ? '#e76f51' : '#94a8b8';
+    const arrowColor = trend.direction === 'rising'  ? '#2a9d8f'
+                     : trend.direction === 'falling' ? '#e76f51'
+                     :                                 '#94a8b8';
 
-    // Ripple lines on water
-    const rippleCount = 5;
-    const ripples = Array.from({length: rippleCount}, (_, i) => {
-      const f = (i + 1) / (rippleCount + 1);
-      const y = margin + f * (tideY - margin);
-      return `<line x1="16" y1="${y.toFixed(1)}" x2="${W-16}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="10 8"/>`;
-    }).join('');
+    const labelText = trend.direction === 'rising'  ? '▲ rising'
+                    : trend.direction === 'falling' ? '▼ falling'
+                    :                                 '— slack';
 
-    // Footprints on sand if there's enough beach visible
-    const prints = [];
-    const sandHeight = H - tideY;
-    if (sandHeight > 30) {
-      [[80, tideY+18],[110,tideY+28],[140,tideY+16],[200,tideY+26],[260,tideY+14],[300,tideY+30]].forEach(([x,y]) => {
-        if (y < H - 6)
-          prints.push(`<ellipse cx="${x}" cy="${y}" rx="4" ry="2.5" fill="rgba(180,140,60,0.4)" transform="rotate(-20,${x},${y})"/>`);
-      });
-    }
+    // Wave path values for SMIL animation (sea fills from tideY to H)
+    const amp = 9;
+    const ty = tideY;
+    const wave1 = `M0,${ty} C80,${ty-amp} 160,${ty+amp} 240,${ty-amp*0.8} C320,${ty+amp*0.6} 370,${ty-amp*0.5} ${W},${ty} L${W},${H} L0,${H} Z`;
+    const wave2 = `M0,${ty} C80,${ty+amp} 160,${ty-amp} 240,${ty+amp*0.8} C320,${ty-amp*0.6} 370,${ty+amp*0.5} ${W},${ty} L${W},${H} L0,${H} Z`;
 
-    // Arrow group — sits on the tide line at centre
+    // Ripple lines in the sea zone
+    const seaH = H - tideY;
+    const ripples = seaH > 18 ? [0.3, 0.6].map(f => {
+      const y = (tideY + amp + 4) + f * (seaH - amp - 8);
+      return `<line x1="20" y1="${y.toFixed(1)}" x2="${W-20}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.18)" stroke-width="1.2" stroke-dasharray="12 9"/>`;
+    }).join('') : '';
+
+    // Footprints in sand zone
+    const sandH = tideY;
+    const prints = sandH > 28 ? [[70,tideY-18],[105,tideY-28],[160,tideY-14],[230,tideY-24],[300,tideY-16],[345,tideY-28]]
+      .filter(([,y]) => y > margin + 6)
+      .map(([x,y]) => `<ellipse cx="${x}" cy="${y}" rx="4" ry="2.5" fill="rgba(180,140,60,0.38)" transform="rotate(-20,${x},${y})"/>`)
+      .join('') : '';
+
+    // Centre of entire SVG for the text block
+    const cx = W / 2;
+    const cy = H / 2;
+
+    // Frosted pill behind the text for legibility across both zones
+    const pillW = 200, pillH = 72, pillR = 18;
+    const px = cx - pillW / 2, py = cy - pillH / 2;
+
+    // Arrow: upward for rising, downward for falling, dash for stable
+    // Placed directly below the height text
+    const arrowBaseY = cy + 22;  // just below big number
     let arrowSVG = '';
-    if (arrowDir !== 0) {
-      const ax = W / 2 + 60; // offset from centre text
-      const ay1 = tideY;
-      const ay2 = tideY + arrowDir * 16;
-      const ayHead = tideY + arrowDir * 24;
+    if (trend.direction === 'rising') {
       arrowSVG = `
-        <g class="tide-dir-arrow">
-          <line x1="${ax}" y1="${ay1}" x2="${ax}" y2="${ay2}"
-            stroke="${arrowColor}" stroke-width="3" stroke-linecap="round"/>
-          <polygon
-            points="${ax},${ayHead} ${ax-6},${ay2 - arrowDir*2} ${ax+6},${ay2 - arrowDir*2}"
-            fill="${arrowColor}"/>
+        <g>
+          <animateTransform attributeName="transform" type="translate" additive="sum"
+            values="0,0;0,-4;0,0" dur="1.6s" repeatCount="indefinite" calcMode="spline"
+            keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+          <polygon points="${cx},${arrowBaseY} ${cx-9},${arrowBaseY+14} ${cx+9},${arrowBaseY+14}"
+            fill="${arrowColor}" opacity="0.95"/>
+          <rect x="${cx-2}" y="${arrowBaseY+13}" width="4" height="9" rx="2" fill="${arrowColor}" opacity="0.95"/>
+        </g>`;
+    } else if (trend.direction === 'falling') {
+      arrowSVG = `
+        <g>
+          <animateTransform attributeName="transform" type="translate" additive="sum"
+            values="0,0;0,4;0,0" dur="1.6s" repeatCount="indefinite" calcMode="spline"
+            keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+          <polygon points="${cx},${arrowBaseY+22} ${cx-9},${arrowBaseY+8} ${cx+9},${arrowBaseY+8}"
+            fill="${arrowColor}" opacity="0.95"/>
+          <rect x="${cx-2}" y="${arrowBaseY}" width="4" height="9" rx="2" fill="${arrowColor}" opacity="0.95"/>
         </g>`;
     } else {
-      const ax = W / 2 + 60;
-      arrowSVG = `<line x1="${ax-10}" y1="${tideY}" x2="${ax+10}" y2="${tideY}"
-        stroke="${arrowColor}" stroke-width="3" stroke-linecap="round"/>`;
+      arrowSVG = `<line x1="${cx-12}" y1="${arrowBaseY+11}" x2="${cx+12}" y2="${arrowBaseY+11}"
+        stroke="${arrowColor}" stroke-width="3" stroke-linecap="round" opacity="0.9"/>`;
     }
-
-    // Tide height value text — overlaid in centre of graphic
-    const heightText = current.toFixed(2);
-    const labelText = trend.direction === 'rising' ? '▲ rising' : trend.direction === 'falling' ? '▼ falling' : '— slack';
-
-    // Shadow rect behind text for legibility
-    const textY = tideY;
-    // Determine if text is in sea or sand zone for color contrast
-    const inSea = tideY > H * 0.45; // text anchor midpoint roughly
-    const numColor = 'white';
-    const numShadow = 'rgba(0,0,0,0.25)';
 
     return `
     <svg class="tide-map-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-      <!-- Sea -->
-      <rect x="0" y="0" width="${W}" height="${tideY}" fill="#2aafc8" rx="0"/>
-      <!-- Sand -->
-      <rect x="0" y="${tideY}" width="${W}" height="${H - tideY}" fill="#f0d88a"/>
-      <!-- Ripples -->
+      <!-- Sand fills whole background (top zone) -->
+      <rect x="0" y="0" width="${W}" height="${H}" fill="#f0d88a"/>
+      <!-- Sea — animated wave fill from tideY to bottom -->
+      <path fill="#2aafc8">
+        <animate attributeName="d" dur="3.5s" repeatCount="indefinite"
+          calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1" keyTimes="0;0.5;1"
+          values="${wave1};${wave2};${wave1}"/>
+      </path>
+      <!-- Subtle sea sheen layer -->
+      <path fill="rgba(100,220,240,0.18)">
+        <animate attributeName="d" dur="2.8s" repeatCount="indefinite"
+          calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1" keyTimes="0;0.5;1"
+          values="M0,${ty+4} C90,${ty+4-7} 180,${ty+4+7} 270,${ty+4-5} C340,${ty+4+5} 380,${ty+4-3} ${W},${ty+4} L${W},${H} L0,${H} Z;M0,${ty+4} C90,${ty+4+7} 180,${ty+4-7} 270,${ty+4+5} C340,${ty+4-5} 380,${ty+4+3} ${W},${ty+4} L${W},${H} L0,${H} Z;M0,${ty+4} C90,${ty+4-7} 180,${ty+4+7} 270,${ty+4-5} C340,${ty+4+5} 380,${ty+4-3} ${W},${ty+4} L${W},${H} L0,${H} Z"/>
+      </path>
+      <!-- Ripples in sea -->
       ${ripples}
-      <!-- Footprints -->
-      ${prints.join('')}
-      <!-- Tide line (wavy) -->
-      <path class="tide-line-animated"
-        d="M0,${tideY} C${W*0.15},${tideY-5} ${W*0.3},${tideY+5} ${W*0.5},${tideY-4} C${W*0.7},${tideY+4} ${W*0.85},${tideY-3} ${W},${tideY}"
-        stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.9"/>
-      <!-- "SEA" label top left -->
-      <text x="12" y="13" text-anchor="start" font-size="9" font-family="DM Sans,sans-serif"
-        font-weight="700" fill="rgba(255,255,255,0.7)" letter-spacing="1.5">SEA</text>
-      <!-- "LAND" label bottom left -->
-      <text x="12" y="${H - 5}" text-anchor="start" font-size="9" font-family="DM Sans,sans-serif"
-        font-weight="700" fill="rgba(160,120,40,0.7)" letter-spacing="1.5">LAND</text>
-      <!-- Tide height — large text centred on tide line -->
-      <text x="${W/2 - 18}" y="${textY - 8}" text-anchor="middle" font-size="10"
+      <!-- Footprints in sand -->
+      ${prints}
+      <!-- LAND label top-left -->
+      <text x="10" y="13" text-anchor="start" font-size="9" font-family="DM Sans,sans-serif"
+        font-weight="700" fill="rgba(160,120,40,0.72)" letter-spacing="1.5">LAND</text>
+      <!-- SEA label bottom-left -->
+      <text x="10" y="${H - 5}" text-anchor="start" font-size="9" font-family="DM Sans,sans-serif"
+        font-weight="700" fill="rgba(255,255,255,0.75)" letter-spacing="1.5">SEA</text>
+      <!-- Frosted pill for text legibility -->
+      <rect x="${px}" y="${py}" width="${pillW}" height="${pillH}" rx="${pillR}"
+        fill="rgba(255,255,255,0.28)" stroke="rgba(255,255,255,0.45)" stroke-width="1"/>
+      <!-- "current height" label -->
+      <text x="${cx}" y="${cy - 20}" text-anchor="middle" font-size="10"
         font-family="DM Sans,sans-serif" font-weight="600"
-        fill="${numShadow}">current height</text>
-      <text x="${W/2 - 18}" y="${textY + 22}" text-anchor="middle"
-        font-size="34" font-family="Fredoka,sans-serif" font-weight="700"
-        fill="white" filter="url(#text-shadow)"
-        style="text-shadow: 0 2px 8px rgba(0,0,0,0.35)">${heightText} m</text>
-      <!-- Direction label to right of height -->
+        fill="rgba(255,255,255,0.85)" letter-spacing="0.5">current height</text>
+      <!-- Big tide height number -->
+      <text x="${cx}" y="${cy + 15}" text-anchor="middle"
+        font-size="38" font-family="Fredoka,sans-serif" font-weight="700"
+        fill="white" style="filter:drop-shadow(0 2px 6px rgba(0,0,0,0.3))">${current.toFixed(2)} m</text>
+      <!-- Direction arrow + label below the pill -->
       ${arrowSVG}
-      <text x="${W/2 + 58}" y="${tideY + 35}" text-anchor="middle" font-size="10"
+      <text x="${cx}" y="${arrowBaseY + 36}" text-anchor="middle" font-size="10.5"
         font-family="DM Sans,sans-serif" font-weight="700"
-        fill="${arrowColor}">${labelText}</text>
+        fill="${arrowColor}" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,0.25))">${labelText}</text>
     </svg>`;
   }
 
